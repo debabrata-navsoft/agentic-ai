@@ -63,18 +63,21 @@ def write_file(args: WriteFileInput, ctx: ToolContext) -> str:
 TOOLS = [
     Tool(
         name="list_files",
+        label="List files",
         description="List files in the agent's workspace directory.",
         input_model=ListFilesInput,
         handler=list_files,
     ),
     Tool(
         name="read_file",
+        label="Read file",
         description="Read a UTF-8 text file from the agent's workspace.",
         input_model=ReadFileInput,
         handler=read_file,
     ),
     Tool(
         name="write_file",
+        label="Write file",
         description="Create or overwrite a text file in the agent's workspace. Use this for "
         "deliverables the user asks you to produce (reports, code, drafts).",
         input_model=WriteFileInput,

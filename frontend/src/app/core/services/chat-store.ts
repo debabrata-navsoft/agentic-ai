@@ -6,6 +6,8 @@ import {
 } from '../models/chat.models';
 import { reduceEvent } from '../utils/reduce-event';
 
+const NOTE_TOOLS = new Set(['save_note', 'delete_note']);
+
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly api = inject(AgentApi);
@@ -23,6 +25,9 @@ export class ChatStore {
   readonly supportedTypes = signal<string[]>([]);
   readonly uploading = signal<string | null>(null);
   readonly uploadError = signal<string | null>(null);
+
+  /** Tool name → display label, from the backend's tool catalog. */
+  readonly toolLabels = computed(() => new Map(this.tools().map((t) => [t.name, t.label])));
 
   readonly currentTitle = computed(
     () => this.sessions().find((s) => s.id === this.currentId())?.title ?? 'New chat',
@@ -70,7 +75,7 @@ export class ChatStore {
 
   async deleteDocument(id: string) {
     await this.api.deleteDocument(id);
-    await this.refreshDocuments();
+    this.documents.update((l) => l.filter((d) => d.id !== id));
   }
 
   newChat() {
@@ -89,12 +94,12 @@ export class ChatStore {
   async deleteSession(id: string) {
     await this.api.deleteSession(id);
     if (id === this.currentId()) this.newChat();
-    await this.refreshSessions();
+    this.sessions.update((l) => l.filter((s) => s.id !== id));
   }
 
   async deleteNote(id: number) {
     await this.api.deleteNote(id);
-    await this.refreshNotes();
+    this.notes.update((l) => l.filter((n) => n.id !== id));
   }
 
   stop() {
@@ -111,40 +116,41 @@ export class ChatStore {
     const assistant: AssistantMessage = { role: 'assistant', parts: [], running: true };
     this.messages.update((m) => [...m, { role: 'user', text }, assistant]);
 
-    let stepStart = 0;
+    // Tokens arrive far faster than the screen refreshes; apply them once per frame so
+    // each message re-renders (and re-parses its Markdown) at most ~60 times a second.
+    let queue: AgentEvent[] = [];
+    let frame = 0;
+    let touchedNotes = false;
+    const flush = () => {
+      frame = 0;
+      const events = queue;
+      queue = [];
+      if (events.length) this.patchLastAssistant((msg) => events.reduce(reduceEvent, msg));
+    };
     const onEvent = (ev: AgentEvent) => {
-      if (ev.event === 'session') {
-        this.currentId.set(ev.data.id);
-        return;
-      }
-      if (ev.event === 'step_start') {
-        stepStart = this.lastAssistant().parts.length;
-        return;
-      }
-      this.patchLastAssistant((msg) => reduceEvent(msg, ev, stepStart));
+      if (ev.event === 'session') return this.currentId.set(ev.data.id);
+      if (ev.event === 'tool_start' && NOTE_TOOLS.has(ev.data.name)) touchedNotes = true;
+      queue.push(ev);
+      frame ||= requestAnimationFrame(flush);
     };
 
     try {
       await this.api.chat(text, this.currentId(), onEvent, this.abort.signal);
     } catch (e) {
       const aborted = e instanceof DOMException && e.name === 'AbortError';
-      this.patchLastAssistant((msg) =>
-        reduceEvent(msg, aborted
-          ? { event: 'notice', data: { message: 'Stopped.' } }
-          : { event: 'error', data: { message: (e as Error).message } }, stepStart),
-      );
+      queue.push(aborted
+        ? { event: 'notice', data: { message: 'Stopped.' } }
+        : { event: 'error', data: { message: (e as Error).message } });
     } finally {
+      cancelAnimationFrame(frame);
+      flush();
       this.patchLastAssistant((msg) => ({ ...msg, running: false }));
       this.running.set(false);
       this.abort = null;
-      // The agent may have created a session, renamed it, or written notes.
+      // The run may have created or renamed the session, or changed memory.
       this.refreshSessions();
-      this.refreshNotes();
+      if (touchedNotes) this.refreshNotes();
     }
-  }
-
-  private lastAssistant(): AssistantMessage {
-    return this.messages().at(-1) as AssistantMessage;
   }
 
   private patchLastAssistant(fn: (msg: AssistantMessage) => AssistantMessage) {

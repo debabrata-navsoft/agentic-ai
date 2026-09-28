@@ -41,10 +41,8 @@ class Store:
     def __init__(self, db_path: Path | str):
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._conn.executescript(SCHEMA)
         self._lock = threading.Lock()
-        with self._lock:
-            self._conn.executescript(SCHEMA)
-            self._conn.commit()
 
     def _execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
         with self._lock:
@@ -83,8 +81,8 @@ class Store:
             (json.dumps(messages), _now(), session_id),
         )
 
-    def rename_session(self, session_id: str, title: str) -> None:
-        self._execute("UPDATE sessions SET title = ? WHERE id = ?", (title, session_id))
+    def rename_session(self, session_id: str, title: str) -> bool:
+        return self._execute("UPDATE sessions SET title = ? WHERE id = ?", (title, session_id)).rowcount > 0
 
     def delete_session(self, session_id: str) -> bool:
         return self._execute("DELETE FROM sessions WHERE id = ?", (session_id,)).rowcount > 0
@@ -100,16 +98,12 @@ class Store:
         return {"id": cur.lastrowid, "title": title, "content": content, "tags": tags, "created_at": now}
 
     def search_notes(self, query: str = "", limit: int = 20) -> list[dict[str, Any]]:
-        if query:
-            like = f"%{query}%"
-            rows = self._execute(
-                "SELECT * FROM notes WHERE title LIKE ? OR content LIKE ? OR tags LIKE ? "
-                "ORDER BY id DESC LIMIT ?",
-                (like, like, like, limit),
-            ).fetchall()
-        else:
-            rows = self._execute("SELECT * FROM notes ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-        return [self._note_row(r) for r in rows]
+        like = f"%{query}%"  # an empty query matches every note
+        rows = self._execute(
+            "SELECT * FROM notes WHERE title LIKE ? OR content LIKE ? OR tags LIKE ? ORDER BY id DESC LIMIT ?",
+            (like, like, like, limit),
+        ).fetchall()
+        return [{**dict(r), "tags": [t for t in r["tags"].split(",") if t]} for r in rows]
 
     def delete_note(self, note_id: int) -> bool:
         return self._execute("DELETE FROM notes WHERE id = ?", (note_id,)).rowcount > 0
@@ -130,9 +124,3 @@ class Store:
 
     def delete_document(self, doc_id: str) -> bool:
         return self._execute("DELETE FROM documents WHERE id = ?", (doc_id,)).rowcount > 0
-
-    @staticmethod
-    def _note_row(row: sqlite3.Row) -> dict[str, Any]:
-        data = dict(row)
-        data["tags"] = [t for t in data["tags"].split(",") if t]
-        return data

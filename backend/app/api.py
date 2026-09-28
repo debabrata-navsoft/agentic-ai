@@ -42,6 +42,17 @@ def _error_message(exc: Exception) -> str:
     return f"Unexpected error: {type(exc).__name__}: {exc}"
 
 
+def _session_or_404(request: Request, session_id: str) -> dict:
+    session = request.app.state.store.get_session(session_id)
+    if session is None:
+        raise HTTPException(404, "Session not found")
+    return session
+
+
+def _sse(event: str, data: dict) -> dict:
+    return {"event": event, "data": json.dumps(data)}
+
+
 @router.get("/health")
 async def health(request: Request):
     s = request.app.state.settings
@@ -50,11 +61,7 @@ async def health(request: Request):
 
 @router.get("/tools")
 async def list_tools(request: Request):
-    agent = request.app.state.agent
-    return [
-        {"name": t["name"], "description": t.get("description", ""), "server": "type" in t}
-        for t in agent.tool_definitions()
-    ]
+    return request.app.state.agent.catalog
 
 
 @router.get("/sessions")
@@ -69,19 +76,15 @@ async def create_session(request: Request):
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str, request: Request):
-    session = request.app.state.store.get_session(session_id)
-    if session is None:
-        raise HTTPException(404, "Session not found")
-    messages = session.pop("messages")
-    return {**session, "messages": to_transcript(messages)}
+    session = _session_or_404(request, session_id)
+    session["messages"] = to_transcript(session["messages"])
+    return session
 
 
 @router.patch("/sessions/{session_id}")
 async def rename_session(session_id: str, body: RenameRequest, request: Request):
-    store = request.app.state.store
-    if store.get_session(session_id) is None:
+    if not request.app.state.store.rename_session(session_id, body.title):
         raise HTTPException(404, "Session not found")
-    store.rename_session(session_id, body.title)
     return {"id": session_id, "title": body.title}
 
 
@@ -133,12 +136,7 @@ async def chat(body: ChatRequest, request: Request):
     store = request.app.state.store
     agent = request.app.state.agent
 
-    if body.session_id:
-        session = store.get_session(body.session_id)
-        if session is None:
-            raise HTTPException(404, "Session not found")
-    else:
-        session = {**store.create_session(), "messages": []}
+    session = _session_or_404(request, body.session_id) if body.session_id else {**store.create_session(), "messages": []}
 
     session_id = session["id"]
     if session_id in _active_sessions:
@@ -155,14 +153,14 @@ async def chat(body: ChatRequest, request: Request):
     async def events():
         _active_sessions.add(session_id)
         try:
-            yield {"event": "session", "data": json.dumps({"id": session_id, "title": session["title"]})}
+            yield _sse("session", {"id": session_id, "title": session["title"]})
             async for ev in agent.run(messages):
-                yield {"event": ev["event"], "data": json.dumps(ev["data"])}
+                yield _sse(ev["event"], ev["data"])
         except Exception as exc:
             log.exception("agent run failed")
             if len(messages) == start_len:
                 messages.pop()  # nothing happened; don't keep the unanswered message
-            yield {"event": "error", "data": json.dumps({"message": _error_message(exc)})}
+            yield _sse("error", {"message": _error_message(exc)})
         finally:
             close_dangling_tool_calls(messages)
             store.save_messages(session_id, messages)

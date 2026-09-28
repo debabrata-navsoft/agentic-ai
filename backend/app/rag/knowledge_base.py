@@ -73,11 +73,12 @@ class KnowledgeBase:
         return self._store.list_documents()
 
     def search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
-        if self._collection.count() == 0:
+        n = self._collection.count()
+        if not n:
             return []
         res = self._collection.query(
             query_embeddings=self._embed([query]),
-            n_results=min(top_k, self._collection.count()),
+            n_results=min(top_k, n),
             include=["documents", "metadatas", "distances"],
         )
         return [

@@ -27,9 +27,14 @@ export class ChatPanel {
     effect(() => {
       this.store.messages();
       const el = this.scroller()?.nativeElement;
-      if (!el) return;
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
-      if (nearBottom) queueMicrotask(() => (el.scrollTop = el.scrollHeight));
+      if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) this.scrollToBottom();
+    });
+  }
+
+  private scrollToBottom() {
+    queueMicrotask(() => {
+      const el = this.scroller()?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
     });
   }
 
@@ -37,10 +42,7 @@ export class ChatPanel {
     if (!text.trim() || this.store.running()) return;
     this.draft.set('');
     this.store.send(text);
-    queueMicrotask(() => {
-      const el = this.scroller()?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    });
+    this.scrollToBottom();
   }
 
   protected onKeydown(ev: KeyboardEvent) {

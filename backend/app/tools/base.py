@@ -1,10 +1,9 @@
 """Minimal tool framework: a Pydantic model describes (and validates) each tool's input."""
 
 import asyncio
-import inspect
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -29,15 +28,13 @@ class ToolError(Exception):
     """Raise from a handler to return an `is_error` tool_result with this message."""
 
 
-Handler = Callable[[Any, ToolContext], str | Awaitable[str]]
-
-
 @dataclass
 class Tool:
     name: str
+    label: str  # shown in the UI
     description: str
     input_model: type[ToolInput]
-    handler: Handler
+    handler: Callable[[Any, ToolContext], str]
 
     def definition(self) -> dict[str, Any]:
         schema = self.input_model.model_json_schema()
@@ -53,17 +50,13 @@ class Tool:
         }
 
     async def run(self, raw_input: Any, ctx: ToolContext) -> tuple[str, bool]:
-        """Validate and execute. Returns (content, is_error)."""
+        """Validate and execute in a worker thread. Returns (content, is_error)."""
         try:
             args = self.input_model.model_validate(raw_input)
         except ValidationError as e:
             return f"Invalid input for {self.name}: {e.errors(include_url=False)}", True
         try:
-            if inspect.iscoroutinefunction(self.handler):
-                result = await self.handler(args, ctx)
-            else:
-                result = await asyncio.to_thread(self.handler, args, ctx)
-            return str(result), False
+            return str(await asyncio.to_thread(self.handler, args, ctx)), False
         except ToolError as e:
             return str(e), True
         except Exception as e:  # tool bugs shouldn't kill the agent loop
@@ -72,14 +65,16 @@ class Tool:
 
 class ToolRegistry:
     def __init__(self, tools: list[Tool]):
-        self._tools = {t.name: t for t in tools}
+        # Sorted, and built once: a byte-stable tool list keeps prompt caching hitting.
+        self._tools = {t.name: t for t in sorted(tools, key=lambda t: t.name)}
+        self._definitions = [t.definition() for t in self._tools.values()]
 
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)
 
     def definitions(self) -> list[dict[str, Any]]:
-        # Sorted for a byte-stable prefix, so prompt caching keeps hitting.
-        return [self._tools[n].definition() for n in sorted(self._tools)]
+        return self._definitions
 
-    def __iter__(self):
-        return iter(self._tools.values())
+    def catalog(self) -> list[dict[str, Any]]:
+        return [{"name": t.name, "label": t.label, "description": t.description, "server": False}
+                for t in self._tools.values()]

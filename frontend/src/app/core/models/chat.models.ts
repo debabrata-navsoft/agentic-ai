@@ -6,12 +6,7 @@ export interface SessionSummary {
 }
 
 export interface TextPart {
-  type: 'text';
-  text: string;
-}
-
-export interface ThinkingPart {
-  type: 'thinking';
+  type: 'text' | 'thinking';
   text: string;
 }
 
@@ -31,7 +26,7 @@ export interface NoticePart {
   tone: 'info' | 'warn' | 'error';
 }
 
-export type Part = TextPart | ThinkingPart | ToolPart | NoticePart;
+export type Part = TextPart | ToolPart | NoticePart;
 
 export interface UserMessage {
   role: 'user';
@@ -50,6 +45,8 @@ export interface AssistantMessage {
   running?: boolean;
   usage?: Usage;
   steps?: number;
+  /** Part index where the current model step began (for `step_discard`). */
+  stepStart?: number;
 }
 
 export type ChatMessage = UserMessage | AssistantMessage;
@@ -81,15 +78,14 @@ export interface DocumentList {
 
 export interface ToolInfo {
   name: string;
+  label: string;
   description: string;
   server: boolean;
 }
 
 export interface Health {
-  status: string;
   model: string;
   effort: string;
-  web_tools: boolean;
 }
 
 /** An event from the backend's /api/chat SSE stream. */

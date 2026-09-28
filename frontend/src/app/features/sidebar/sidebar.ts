@@ -13,6 +13,12 @@ type Tab = 'chats' | 'knowledge' | 'memory' | 'tools';
 export class Sidebar {
   protected readonly store = inject(ChatStore);
   protected readonly tab = signal<Tab>('chats');
+  protected readonly tabs: { id: Tab; label: string; count?: () => number }[] = [
+    { id: 'chats', label: 'Chats' },
+    { id: 'knowledge', label: 'Docs', count: () => this.store.documents().length },
+    { id: 'memory', label: 'Memory', count: () => this.store.notes().length },
+    { id: 'tools', label: 'Tools' },
+  ];
   protected readonly dragging = signal(false);
   protected readonly accept = computed(() => this.store.supportedTypes().join(','));
 

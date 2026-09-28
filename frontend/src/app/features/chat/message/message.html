@@ -3,7 +3,7 @@
   <div class="msg user"><div class="bubble">{{ m.text }}</div></div>
 } @else {
   <div class="msg assistant">
-    <div class="avatar">A</div>
+    <div class="logo small">A</div>
     <div class="body">
       @for (part of m.parts; track $index) {
         @switch (part.type) {
@@ -23,7 +23,7 @@
                   {{ statusIcon(part, !!m.running) }}
                 </span>
                 <span class="tool-name">{{ label(part.name) }}</span>
-                <span class="tool-arg">{{ preview(part) }}</span>
+                <span class="tool-arg truncate">{{ preview(part) }}</span>
                 @if (part.server) { <span class="badge">hosted</span> }
               </summary>
               @if (part.input) {

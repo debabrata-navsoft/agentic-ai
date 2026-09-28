@@ -1,20 +1,4 @@
-import asyncio
-
-import pytest
-
-from app.store import Store
-from app.tools import ToolContext, build_registry
-
-
-@pytest.fixture
-def ctx(tmp_path):
-    ws = tmp_path / "workspace"
-    ws.mkdir()
-    return ToolContext(store=Store(tmp_path / "t.db"), workspace=ws)
-
-
-def run(ctx, name, args):
-    return asyncio.run(build_registry().get(name).run(args, ctx))
+from conftest import REGISTRY, run_tool as run
 
 
 def test_calculator(ctx):
@@ -23,8 +7,7 @@ def test_calculator(ctx):
 
 
 def test_calculator_rejects_code(ctx):
-    out, is_error = run(ctx, "calculator", {"expression": "__import__('os').system('ls')"})
-    assert is_error
+    assert run(ctx, "calculator", {"expression": "__import__('os').system('ls')"})[1]
 
 
 def test_invalid_input_is_error(ctx):
@@ -56,7 +39,7 @@ def test_files_confined_to_workspace(ctx):
 
 
 def test_definitions_are_sorted_and_valid():
-    defs = build_registry().definitions()
+    defs = REGISTRY.definitions()
     names = [d["name"] for d in defs]
     assert names == sorted(names)
     for d in defs:

@@ -7,10 +7,6 @@
 }
 
 .msg.assistant { display: flex; gap: 12px; }
-.avatar {
-  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 800; font-size: 13px; color: #fff;
-}
 .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 
 .thinking, .tool {
@@ -28,7 +24,7 @@
 .status.spin { color: var(--accent); animation: spin 1s linear infinite; display: inline-block; }
 .tool.error .status { color: var(--err); }
 .tool-name { color: var(--text); font-weight: 600; }
-.tool-arg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-arg { flex: 1; }
 .io-label { padding: 6px 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .tool pre {
   margin: 4px 12px 10px; padding: 10px; background: var(--bg); border-radius: 8px;
@@ -36,8 +32,8 @@
 }
 
 .notice { font-size: 13px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); }
-.notice.warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.4); }
-.notice.error { color: var(--err); border-color: rgba(248, 113, 113, 0.4); }
+.notice.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.notice.error { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 
 .meta { font-size: 12px; color: var(--muted); opacity: 0.7; }
 

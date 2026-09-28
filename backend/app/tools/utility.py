@@ -83,6 +83,7 @@ def get_current_time(args: TimeInput, ctx: ToolContext) -> str:
 TOOLS = [
     Tool(
         name="calculator",
+        label="Calculator",
         description="Evaluate an arithmetic expression exactly. Use this instead of doing "
         "non-trivial math in your head. Supports + - * / // % **, parentheses, "
         "pi, e, and math functions like sqrt, log, sin, factorial, round.",
@@ -91,6 +92,7 @@ TOOLS = [
     ),
     Tool(
         name="get_current_time",
+        label="Clock",
         description="Get the current date and time in a given timezone. Use whenever the "
         "answer depends on today's date or the current time.",
         input_model=TimeInput,

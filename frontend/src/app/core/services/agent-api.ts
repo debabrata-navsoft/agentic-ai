@@ -12,46 +12,28 @@ const API = '/api';
 export class AgentApi {
   private readonly http = inject(HttpClient);
 
-  health() {
-    return firstValueFrom(this.http.get<Health>(`${API}/health`));
+  private get<T>(path: string) {
+    return firstValueFrom(this.http.get<T>(API + path));
   }
 
-  tools() {
-    return firstValueFrom(this.http.get<ToolInfo[]>(`${API}/tools`));
+  private del(path: string) {
+    return firstValueFrom(this.http.delete<void>(API + path));
   }
 
-  sessions() {
-    return firstValueFrom(this.http.get<SessionSummary[]>(`${API}/sessions`));
-  }
-
-  session(id: string) {
-    return firstValueFrom(this.http.get<SessionDetail>(`${API}/sessions/${id}`));
-  }
-
-  deleteSession(id: string) {
-    return firstValueFrom(this.http.delete<void>(`${API}/sessions/${id}`));
-  }
-
-  notes() {
-    return firstValueFrom(this.http.get<Note[]>(`${API}/notes`));
-  }
-
-  deleteNote(id: number) {
-    return firstValueFrom(this.http.delete<void>(`${API}/notes/${id}`));
-  }
-
-  documents() {
-    return firstValueFrom(this.http.get<DocumentList>(`${API}/documents`));
-  }
+  health = () => this.get<Health>('/health');
+  tools = () => this.get<ToolInfo[]>('/tools');
+  sessions = () => this.get<SessionSummary[]>('/sessions');
+  session = (id: string) => this.get<SessionDetail>(`/sessions/${id}`);
+  deleteSession = (id: string) => this.del(`/sessions/${id}`);
+  notes = () => this.get<Note[]>('/notes');
+  deleteNote = (id: number) => this.del(`/notes/${id}`);
+  documents = () => this.get<DocumentList>('/documents');
+  deleteDocument = (id: string) => this.del(`/documents/${id}`);
 
   uploadDocument(file: File) {
     const form = new FormData();
     form.append('file', file);
     return firstValueFrom(this.http.post<KnowledgeDocument>(`${API}/documents`, form));
-  }
-
-  deleteDocument(id: string) {
-    return firstValueFrom(this.http.delete<void>(`${API}/documents/${id}`));
   }
 
   /**

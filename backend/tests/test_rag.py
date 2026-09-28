@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import json
 import math
@@ -9,7 +8,7 @@ import pytest
 from app.rag import KnowledgeBase, UnsupportedFileError
 from app.rag.chunking import chunk_text, extract_text
 from app.store import Store
-from app.tools import ToolContext, build_registry
+from conftest import run_tool
 
 DIM = 256
 
@@ -65,14 +64,12 @@ def test_add_search_delete(kb):
     assert not kb.delete_document(doc["id"])
 
 
-def test_search_tool(kb, tmp_path):
-    ctx = ToolContext(store=Store(tmp_path / "t2.db"), workspace=tmp_path, kb=kb)
-    tool = build_registry().get("search_knowledge_base")
-
-    out, is_error = asyncio.run(tool.run({"query": "anything"}, ctx))
+def test_search_tool(kb, ctx):
+    ctx.kb = kb
+    out, is_error = run_tool(ctx, "search_knowledge_base", {"query": "anything"})
     assert not is_error and "empty" in out
 
     kb.add_document("faq.md", b"The Wi-Fi password is hunter2.")
-    out, is_error = asyncio.run(tool.run({"query": "wifi password"}, ctx))
+    out, is_error = run_tool(ctx, "search_knowledge_base", {"query": "wifi password"})
     assert not is_error
     assert json.loads(out)[0]["source"] == "faq.md"

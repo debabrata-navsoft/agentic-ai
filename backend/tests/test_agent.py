@@ -10,8 +10,7 @@ from anthropic import AsyncAnthropic, DefaultAsyncHttpxClient
 from app.agent import Agent
 from app.agent.loop import close_dangling_tool_calls
 from app.config import Settings
-from app.store import Store
-from app.tools import ToolContext, build_registry
+from app.tools import build_registry
 from app.transcript import to_transcript
 
 
@@ -45,7 +44,7 @@ def message_events(blocks: list[dict], stop_reason: str) -> list[dict]:
 
 
 @pytest.fixture
-def agent_and_requests(tmp_path):
+def agent_and_requests(tmp_path, ctx):
     requests: list[dict] = []
     responses = [
         message_events([
@@ -62,9 +61,7 @@ def agent_and_requests(tmp_path):
 
     client = AsyncAnthropic(api_key="test", http_client=DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)))
     settings = Settings(data_dir=tmp_path, workspace_dir=tmp_path, enable_web_tools=False)
-    ws = tmp_path / "ws"
-    ws.mkdir()
-    agent = Agent(client, settings, build_registry(), ToolContext(store=Store(tmp_path / "a.db"), workspace=ws))
+    agent = Agent(client, settings, build_registry(), ctx)
     return agent, requests
 
 

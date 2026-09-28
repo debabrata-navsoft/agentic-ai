@@ -9,14 +9,11 @@
 <button class="new-chat" (click)="store.newChat()" [disabled]="store.running()">+ New chat</button>
 
 <nav class="tabs">
-  <button [class.active]="tab() === 'chats'" (click)="tab.set('chats')">Chats</button>
-  <button [class.active]="tab() === 'knowledge'" (click)="tab.set('knowledge')">
-    Docs <span class="count">{{ store.documents().length }}</span>
-  </button>
-  <button [class.active]="tab() === 'memory'" (click)="tab.set('memory')">
-    Memory <span class="count">{{ store.notes().length }}</span>
-  </button>
-  <button [class.active]="tab() === 'tools'" (click)="tab.set('tools')">Tools</button>
+  @for (t of tabs; track t.id) {
+    <button [class.active]="tab() === t.id" (click)="tab.set(t.id)">
+      {{ t.label }} @if (t.count) { <span class="count">{{ t.count() }}</span> }
+    </button>
+  }
 </nav>
 
 <div class="list">
@@ -24,7 +21,7 @@
     @case ('chats') {
       @for (s of store.sessions(); track s.id) {
         <div class="item" [class.active]="s.id === store.currentId()" (click)="store.open(s.id)">
-          <span class="item-title">{{ s.title }}</span>
+          <span class="item-title truncate">{{ s.title }}</span>
           <button class="icon" title="Delete chat" (click)="$event.stopPropagation(); store.deleteSession(s.id)">✕</button>
         </div>
       } @empty {
@@ -53,7 +50,7 @@
       @for (d of store.documents(); track d.id) {
         <div class="card">
           <div class="card-head">
-            <strong class="doc-name">{{ d.name }}</strong>
+            <strong class="truncate">{{ d.name }}</strong>
             <button class="icon" title="Remove from knowledge base" (click)="store.deleteDocument(d.id)">✕</button>
           </div>
           <p>{{ formatSize(d.size) }} · {{ d.chunks }} chunk{{ d.chunks === 1 ? '' : 's' }}</p>
@@ -84,10 +81,10 @@
       @for (t of store.tools(); track t.name) {
         <div class="card">
           <div class="card-head">
-            <strong>{{ t.name }}</strong>
+            <strong>{{ t.label }}</strong>
             @if (t.server) { <span class="badge">hosted</span> }
           </div>
-          <p>{{ t.description || 'Anthropic-hosted tool.' }}</p>
+          <p>{{ t.description }}</p>
         </div>
       }
     }

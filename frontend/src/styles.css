@@ -37,12 +37,15 @@ pre, code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, 
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   font-weight: 800; color: #fff; flex-shrink: 0;
 }
+.logo.small { width: 28px; height: 28px; font-size: 13px; border-radius: 8px; }
 .logo.big { width: 56px; height: 56px; font-size: 26px; border-radius: 16px; margin: 0 auto 12px; }
 
 .badge {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px;
-  border-radius: 6px; background: rgba(124, 140, 255, 0.15); color: var(--accent);
+  border-radius: 6px; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);
 }
+
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Rendered Markdown is inserted via [innerHTML], which component-scoped styles can't reach. */
 .markdown > :first-child { margin-top: 0; }

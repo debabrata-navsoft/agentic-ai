@@ -12,13 +12,13 @@ from anthropic import AsyncAnthropic
 
 from app.agent.prompts import SYSTEM_PROMPT
 from app.config import Settings
-from app.tools import SERVER_TOOLS, ToolContext, ToolRegistry
+from app.tools import SERVER_TOOL_CATALOG, SERVER_TOOLS, ToolContext, ToolRegistry
+from app.transcript import MAX_RESULT_PREVIEW, is_server_result, summarize_server_result
 
 log = logging.getLogger(__name__)
 
 Event = dict[str, Any]
 MAX_JSON_RETRIES = 2
-MAX_RESULT_PREVIEW = 2000
 
 
 def _event(event: str, /, **data: Any) -> Event:
@@ -31,6 +31,10 @@ def _dump_block(block: Any) -> dict[str, Any]:
     return data
 
 
+def _tool_result(tool_use_id: str, content: str, is_error: bool) -> dict[str, Any]:
+    return {"type": "tool_result", "tool_use_id": tool_use_id, "content": content, "is_error": is_error}
+
+
 def _echo_content(blocks: list[Any]) -> list[Any]:
     """Blocks to append to history as the assistant turn.
 
@@ -41,14 +45,14 @@ def _echo_content(blocks: list[Any]) -> list[Any]:
     if boundary is None:
         return blocks
     before, after = blocks[:boundary], blocks[boundary + 1 :]
-    result_ids = {getattr(b, "tool_use_id", None) for b in before if b.type.endswith("_tool_result")}
+    result_ids = {getattr(b, "tool_use_id", None) for b in before if is_server_result(b.type)}
     kept_server_ids = {b.id for b in before if b.type == "server_tool_use" and b.id in result_ids}
     kept = [
         b
         for b in before
         if b.type == "text"
         or (b.type == "server_tool_use" and b.id in kept_server_ids)
-        or (b.type.endswith("_tool_result") and getattr(b, "tool_use_id", None) in kept_server_ids)
+        or (is_server_result(b.type) and getattr(b, "tool_use_id", None) in kept_server_ids)
     ]
     return kept + after
 
@@ -60,27 +64,9 @@ def close_dangling_tool_calls(messages: list[dict[str, Any]]) -> None:
         return
     pending = [b["id"] for b in messages[-1]["content"] if b.get("type") == "tool_use"]
     if pending:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": i, "content": "Interrupted before completion.", "is_error": True}
-                for i in pending
-            ],
-        })
-
-
-def _summarize_server_result(block: Any) -> tuple[str, bool]:
-    content = getattr(block, "content", None)
-    if block.type == "web_search_tool_result":
-        if isinstance(content, list):
-            lines = [f"- {r.title} — {r.url}" for r in content if getattr(r, "type", "") == "web_search_result"]
-            return "\n".join(lines) or "No results", False
-        return f"Search error: {getattr(content, 'error_code', 'unknown')}", True
-    if block.type == "web_fetch_tool_result":
-        if getattr(content, "type", "") == "web_fetch_result":
-            return f"Fetched {content.url}", False
-        return f"Fetch error: {getattr(content, 'error_code', 'unknown')}", True
-    return block.type, False
+        messages.append(
+            {"role": "user", "content": [_tool_result(i, "Interrupted before completion.", True) for i in pending]}
+        )
 
 
 class Agent:
@@ -89,19 +75,16 @@ class Agent:
         self.settings = settings
         self.registry = registry
         self.ctx = ctx
-
-    def tool_definitions(self) -> list[dict[str, Any]]:
-        tools = self.registry.definitions()
-        if self.settings.enable_web_tools:
-            tools += SERVER_TOOLS
-        return tools
+        web = settings.enable_web_tools
+        self.tools = registry.definitions() + (SERVER_TOOLS if web else [])
+        self.catalog = registry.catalog() + (SERVER_TOOL_CATALOG if web else [])
 
     def _request(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         kwargs: dict[str, Any] = {
             "model": self.settings.model,
             "max_tokens": self.settings.max_tokens,
             "system": SYSTEM_PROMPT,
-            "tools": self.tool_definitions(),
+            "tools": self.tools,
             "messages": messages,
             "thinking": {"type": "adaptive", "display": "summarized"},
             "output_config": {"effort": self.settings.effort},
@@ -166,7 +149,7 @@ class Agent:
                 break
 
             for b in tool_uses:
-                yield _event("tool_input", id=b.id, name=b.name, input=b.input, server=False)
+                yield _event("tool_input", id=b.id, input=b.input)
 
             if stop_reason == "max_tokens":
                 # Tool input was cut off; a truncated input still parses, so don't run it.
@@ -176,12 +159,8 @@ class Agent:
 
             tool_results = []
             for block, (output, is_error) in zip(tool_uses, results):
-                yield _event(
-                    "tool_result", id=block.id, name=block.name, output=output[:MAX_RESULT_PREVIEW], is_error=is_error
-                )
-                tool_results.append(
-                    {"type": "tool_result", "tool_use_id": block.id, "content": output, "is_error": is_error}
-                )
+                yield _event("tool_result", id=block.id, output=output[:MAX_RESULT_PREVIEW], is_error=is_error)
+                tool_results.append(_tool_result(block.id, output, is_error))
             # All results go back in a single user message (keeps parallel tool use working).
             messages.append({"role": "user", "content": tool_results})
             step += 1
@@ -213,8 +192,8 @@ class Agent:
         if ev.type == "content_block_stop":
             block = ev.content_block
             if block.type == "server_tool_use":
-                return _event("tool_input", id=block.id, name=block.name, input=block.input, server=True)
-            if block.type.endswith("_tool_result") and block.type != "tool_result":
-                output, is_error = _summarize_server_result(block)
-                return _event("tool_result", id=block.tool_use_id, name=block.type, output=output, is_error=is_error)
+                return _event("tool_input", id=block.id, input=block.input)
+            if is_server_result(block.type):
+                output, is_error = summarize_server_result(_dump_block(block))
+                return _event("tool_result", id=block.tool_use_id, output=output, is_error=is_error)
         return None

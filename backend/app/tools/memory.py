@@ -43,6 +43,7 @@ def delete_note(args: DeleteNoteInput, ctx: ToolContext) -> str:
 TOOLS = [
     Tool(
         name="save_note",
+        label="Save to memory",
         description="Save a note to long-term memory. Memory persists across conversations, so "
         "use it for user preferences, facts about the user, and results worth reusing.",
         input_model=SaveNoteInput,
@@ -50,6 +51,7 @@ TOOLS = [
     ),
     Tool(
         name="search_notes",
+        label="Search memory",
         description="Search long-term memory notes by keyword. Check memory when the user refers "
         "to something from a previous conversation or asks what you remember.",
         input_model=SearchNotesInput,
@@ -57,6 +59,7 @@ TOOLS = [
     ),
     Tool(
         name="delete_note",
+        label="Delete memory",
         description="Delete a note from long-term memory by ID.",
         input_model=DeleteNoteInput,
         handler=delete_note,
