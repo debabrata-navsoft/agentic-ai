@@ -1,0 +1,45 @@
+:host {
+  display: flex; flex-direction: column; gap: 12px; min-height: 0;
+  padding: 16px; background: var(--panel); border-right: 1px solid var(--border);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 4px 8px; }
+.brand-name { font-weight: 700; font-size: 17px; }
+.brand-sub { color: var(--muted); font-size: 12px; }
+
+.new-chat {
+  padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel-2); font-weight: 600;
+}
+.new-chat:hover:not(:disabled) { border-color: var(--accent); }
+
+.tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; }
+.tabs button {
+  flex: 1; padding: 6px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--muted); font-size: 13px;
+}
+.tabs button.active { background: var(--panel-2); color: var(--text); }
+.count { font-size: 11px; background: var(--border); border-radius: 8px; padding: 0 6px; margin-left: 2px; }
+
+.list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.item {
+  display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px;
+  cursor: pointer; color: var(--muted);
+}
+.item:hover, .item.active { background: var(--panel-2); color: var(--text); }
+.item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+
+.icon { border: 0; background: transparent; color: var(--muted); padding: 2px 4px; border-radius: 4px; font-size: 12px; opacity: 0; }
+.item:hover .icon, .card:hover .icon { opacity: 1; }
+.icon:hover { color: var(--err); }
+
+.card { padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; }
+.card p { margin: 4px 0 0; color: var(--muted); white-space: pre-wrap; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tags span { font-size: 11px; color: var(--accent); }
+
+.empty { color: var(--muted); font-size: 13px; padding: 8px; }
+
+.model { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }

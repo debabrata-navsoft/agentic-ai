@@ -1,0 +1,47 @@
+:host { display: block; }
+
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble {
+  max-width: 78%; padding: 10px 14px; border-radius: 16px 16px 4px 16px;
+  background: var(--panel-2); border: 1px solid var(--border); white-space: pre-wrap;
+}
+
+.msg.assistant { display: flex; gap: 12px; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 800; font-size: 13px; color: #fff;
+}
+.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.thinking, .tool {
+  border: 1px solid var(--border); border-radius: 10px; background: var(--panel); font-size: 13px;
+}
+.thinking summary, .tool summary {
+  display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer;
+  list-style: none; color: var(--muted);
+}
+.thinking summary::-webkit-details-marker, .tool summary::-webkit-details-marker { display: none; }
+.thinking summary::before { content: '✦'; color: var(--accent-2); }
+.thinking .markdown { padding: 4px 14px 12px; color: var(--muted); }
+
+.status { width: 16px; text-align: center; color: var(--ok); }
+.status.spin { color: var(--accent); animation: spin 1s linear infinite; display: inline-block; }
+.tool.error .status { color: var(--err); }
+.tool-name { color: var(--text); font-weight: 600; }
+.tool-arg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.io-label { padding: 6px 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.tool pre {
+  margin: 4px 12px 10px; padding: 10px; background: var(--bg); border-radius: 8px;
+  white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow-y: auto;
+}
+
+.notice { font-size: 13px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); }
+.notice.warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.4); }
+.notice.error { color: var(--err); border-color: rgba(248, 113, 113, 0.4); }
+
+.meta { font-size: 12px; color: var(--muted); opacity: 0.7; }
+
+.typing { display: flex; gap: 4px; padding: 8px 0; }
+.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: pulse 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }

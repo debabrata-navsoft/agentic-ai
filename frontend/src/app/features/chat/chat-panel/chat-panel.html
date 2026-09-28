@@ -1,0 +1,46 @@
+<header class="topbar">
+  <h1>{{ store.currentTitle() }}</h1>
+  @if (store.running()) { <span class="working">Agent working…</span> }
+</header>
+
+<section class="messages" #scroller>
+  @if (store.error(); as err) {
+    <div class="banner">{{ err }}</div>
+  }
+
+  @if (!store.messages().length) {
+    <div class="welcome">
+      <div class="logo big">A</div>
+      <h2>What should we work on?</h2>
+      <p>Atlas plans, searches the web, calculates, remembers, and writes files, step by step.</p>
+      <div class="suggestions">
+        @for (s of suggestions; track s) {
+          <button (click)="submit(s)">{{ s }}</button>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="thread">
+    @for (m of store.messages(); track $index) {
+      <app-message [message]="m" />
+    }
+  </div>
+</section>
+
+<footer class="composer">
+  <div class="composer-box">
+    <textarea
+      rows="1"
+      placeholder="Message Atlas…  (Enter to send, Shift+Enter for a new line)"
+      [value]="draft()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+    @if (store.running()) {
+      <button class="send stop" (click)="store.stop()" title="Stop">■</button>
+    } @else {
+      <button class="send" (click)="submit()" [disabled]="!draft().trim()" title="Send">↑</button>
+    }
+  </div>
+</footer>

@@ -1,0 +1,57 @@
+/* Global theme and shared rules. Component-specific styles live next to each component. */
+
+:root {
+  --bg: #0f1115;
+  --panel: #161a21;
+  --panel-2: #1d222b;
+  --border: #2a303b;
+  --text: #e6e8ec;
+  --muted: #8b93a3;
+  --accent: #7c8cff;
+  --accent-2: #a78bfa;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --radius: 12px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.6 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+pre, code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+/* Shared by the sidebar and the welcome screen */
+.logo {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.logo.big { width: 56px; height: 56px; font-size: 26px; border-radius: 16px; margin: 0 auto 12px; }
+
+.badge {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px;
+  border-radius: 6px; background: rgba(124, 140, 255, 0.15); color: var(--accent);
+}
+
+/* Rendered Markdown is inserted via [innerHTML], which component-scoped styles can't reach. */
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown a { color: var(--accent); }
+.markdown pre { background: var(--panel); border: 1px solid var(--border); padding: 12px; border-radius: 10px; overflow-x: auto; }
+.markdown :not(pre) > code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+.markdown table { border-collapse: collapse; }
+.markdown th, .markdown td { border: 1px solid var(--border); padding: 6px 10px; }
+
+@keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }

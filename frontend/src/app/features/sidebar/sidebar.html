@@ -1,0 +1,65 @@
+<div class="brand">
+  <div class="logo">A</div>
+  <div>
+    <div class="brand-name">Atlas</div>
+    <div class="brand-sub">Agentic AI assistant</div>
+  </div>
+</div>
+
+<button class="new-chat" (click)="store.newChat()" [disabled]="store.running()">+ New chat</button>
+
+<nav class="tabs">
+  <button [class.active]="tab() === 'chats'" (click)="tab.set('chats')">Chats</button>
+  <button [class.active]="tab() === 'memory'" (click)="tab.set('memory')">
+    Memory <span class="count">{{ store.notes().length }}</span>
+  </button>
+  <button [class.active]="tab() === 'tools'" (click)="tab.set('tools')">Tools</button>
+</nav>
+
+<div class="list">
+  @switch (tab()) {
+    @case ('chats') {
+      @for (s of store.sessions(); track s.id) {
+        <div class="item" [class.active]="s.id === store.currentId()" (click)="store.open(s.id)">
+          <span class="item-title">{{ s.title }}</span>
+          <button class="icon" title="Delete chat" (click)="$event.stopPropagation(); store.deleteSession(s.id)">✕</button>
+        </div>
+      } @empty {
+        <p class="empty">No conversations yet.</p>
+      }
+    }
+    @case ('memory') {
+      @for (n of store.notes(); track n.id) {
+        <div class="card">
+          <div class="card-head">
+            <strong>{{ n.title }}</strong>
+            <button class="icon" title="Forget" (click)="store.deleteNote(n.id)">✕</button>
+          </div>
+          <p>{{ n.content }}</p>
+          @if (n.tags.length) {
+            <div class="tags">
+              @for (t of n.tags; track t) { <span>#{{ t }}</span> }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="empty">Nothing remembered yet. Ask Atlas to remember something.</p>
+      }
+    }
+    @case ('tools') {
+      @for (t of store.tools(); track t.name) {
+        <div class="card">
+          <div class="card-head">
+            <strong>{{ t.name }}</strong>
+            @if (t.server) { <span class="badge">hosted</span> }
+          </div>
+          <p>{{ t.description || 'Anthropic-hosted tool.' }}</p>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (store.health(); as h) {
+  <div class="model"><span class="dot"></span>{{ h.model }} · effort {{ h.effort }}</div>
+}
