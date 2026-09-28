@@ -17,7 +17,7 @@ export class ChatPanel {
     'Research the latest stable Python release and summarize what changed, with sources.',
     'Remember that I prefer concise answers and I work mostly in Python and Angular.',
     'What is the compound interest on ₹2,50,000 at 7.5% for 12 years? Show the math.',
-    'Write a project README draft for an agentic AI app to README.md in your workspace.',
+    'Summarize the documents in my knowledge base and list the key facts from each.',
   ];
 
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');

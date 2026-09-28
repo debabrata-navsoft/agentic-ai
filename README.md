@@ -1,7 +1,25 @@
 # Atlas — Agentic AI Assistant
 
 A full-stack agentic AI app: a **FastAPI** backend runs a Claude-powered agent loop with tools,
-and an **Angular** frontend streams the agent's reasoning, tool calls, and answers live.
+memory, and RAG, and an **Angular** frontend streams the agent's reasoning, tool calls, and answers live.
+
+```
+Angular 21 (Chat UI)
+   │
+   │  HTTP (REST) / SSE (streaming)
+   ▼
+Python Backend
+   ├── FastAPI           app/api.py
+   ├── Agent             app/agent/loop.py      understand → choose tool → execute → observe → repeat
+   ├── LLM               Claude (claude-opus-5, adaptive thinking)
+   ├── Tools             app/tools/             web search/fetch, calculator, clock, files
+   ├── Memory            app/tools/memory.py    long-term notes shared across chats
+   └── RAG               app/rag/               upload → chunk → embed → retrieve
+        ├── Database     SQLite                 sessions, notes, document metadata
+        └── Vector DB    ChromaDB               chunk embeddings (local all-MiniLM-L6-v2)
+```
+
+## Project layout
 
 ```
 agentic-ai/
@@ -15,10 +33,14 @@ agentic-ai/
 │   │   ├── agent/
 │   │   │   ├── loop.py       Streaming agent loop (tool calls, pause_turn, refusals, fallbacks)
 │   │   │   └── prompts.py    System prompt
+│   │   ├── rag/
+│   │   │   ├── chunking.py   Text/PDF extraction, paragraph-aware chunking with overlap
+│   │   │   └── knowledge_base.py  ChromaDB vector store: add, search, delete
 │   │   └── tools/
 │   │       ├── base.py       Tool framework (Pydantic-validated inputs)
 │   │       ├── utility.py    calculator, get_current_time
 │   │       ├── memory.py     save_note, search_notes, delete_note
+│   │       ├── knowledge.py  search_knowledge_base, list_documents (RAG retrieval)
 │   │       └── files.py      list_files, read_file, write_file (sandboxed workspace)
 │   └── tests/
 └── frontend/                 Angular 21 · signals · standalone components
@@ -29,7 +51,7 @@ agentic-ai/
         │   └── utils/        reduce-event.ts — stream event → message reducer
         ├── shared/pipes/     markdown.pipe.ts
         └── features/
-            ├── sidebar/      Chats · Memory · Tools panel
+            ├── sidebar/      Chats · Docs (upload) · Memory · Tools panel
             └── chat/
                 ├── chat-panel/   Thread, welcome screen, composer
                 └── message/      One message: text, reasoning, tool cards
@@ -48,7 +70,19 @@ agentic-ai/
    can be resumed later.
 
 **Tools:** web search and web fetch (run by Anthropic's servers), calculator, clock, long-term memory
-shared across chats, and file read/write confined to `backend/workspace/`.
+shared across chats, RAG search over uploaded documents, and file read/write confined to
+`backend/workspace/`.
+
+## How RAG works
+
+1. **Ingest:** upload a file from the Docs tab (`POST /api/documents`). Text is extracted (PDF via
+   `pypdf`), split into ~1000-character chunks with 150 characters of overlap, embedded locally with
+   all-MiniLM-L6-v2, and stored in ChromaDB (`backend/data/chroma/`).
+2. **Retrieve:** when a question may be answered by your documents, the agent calls
+   `search_knowledge_base`, which embeds the query and returns the top passages by cosine similarity.
+3. **Generate:** Claude answers from those passages and cites the source file names.
+
+The embedding model (~80 MB) downloads on first upload and is cached in `~/.cache/chroma`.
 
 ## Run it
 
@@ -73,7 +107,7 @@ npm start                          # http://localhost:4200, proxies /api → :80
 ## Tests
 
 ```bash
-cd backend && pytest               # tools + agent loop against a mocked HTTP transport
+cd backend && pytest               # tools, RAG, and agent loop against a mocked HTTP transport
 cd frontend && npx ng test --watch=false
 ```
 
@@ -84,6 +118,8 @@ cd frontend && npx ng test --watch=false
 | `POST` | `/api/chat` | `{message, session_id?}` → SSE stream of agent events |
 | `GET` | `/api/sessions` | List conversations |
 | `GET` / `PATCH` / `DELETE` | `/api/sessions/{id}` | Read transcript / rename / delete |
+| `GET` / `POST` | `/api/documents` | List / upload (multipart `file`) RAG documents |
+| `DELETE` | `/api/documents/{id}` | Remove a document and its vectors |
 | `GET` | `/api/notes` | Long-term memory (`?q=` to search) |
 | `DELETE` | `/api/notes/{id}` | Forget a note |
 | `GET` | `/api/tools` | Tool catalog |

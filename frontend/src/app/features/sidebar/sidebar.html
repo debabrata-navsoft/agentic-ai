@@ -10,6 +10,9 @@
 
 <nav class="tabs">
   <button [class.active]="tab() === 'chats'" (click)="tab.set('chats')">Chats</button>
+  <button [class.active]="tab() === 'knowledge'" (click)="tab.set('knowledge')">
+    Docs <span class="count">{{ store.documents().length }}</span>
+  </button>
   <button [class.active]="tab() === 'memory'" (click)="tab.set('memory')">
     Memory <span class="count">{{ store.notes().length }}</span>
   </button>
@@ -26,6 +29,37 @@
         </div>
       } @empty {
         <p class="empty">No conversations yet.</p>
+      }
+    }
+    @case ('knowledge') {
+      <label
+        class="dropzone"
+        [class.over]="dragging()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="dragging.set(false)"
+        (drop)="onDrop($event)"
+      >
+        <input type="file" multiple [accept]="accept()" (change)="onFilesPicked($event)" hidden />
+        @if (store.uploading(); as name) {
+          <span>Indexing {{ name }}…</span>
+        } @else {
+          <strong>Upload documents</strong>
+          <span>Drop PDF, Markdown, text or code files. Atlas searches them to answer questions (RAG).</span>
+        }
+      </label>
+      @if (store.uploadError(); as err) {
+        <p class="upload-error">{{ err }}</p>
+      }
+      @for (d of store.documents(); track d.id) {
+        <div class="card">
+          <div class="card-head">
+            <strong class="doc-name">{{ d.name }}</strong>
+            <button class="icon" title="Remove from knowledge base" (click)="store.deleteDocument(d.id)">✕</button>
+          </div>
+          <p>{{ formatSize(d.size) }} · {{ d.chunks }} chunk{{ d.chunks === 1 ? '' : 's' }}</p>
+        </div>
+      } @empty {
+        @if (!store.uploading()) { <p class="empty">No documents yet.</p> }
       }
     }
     @case ('memory') {

@@ -15,6 +15,8 @@ const TOOL_LABELS: Record<string, string> = {
   list_files: 'List files',
   read_file: 'Read file',
   write_file: 'Write file',
+  search_knowledge_base: 'Search documents',
+  list_documents: 'List documents',
 };
 
 /** One chat message: a user bubble, or an assistant turn with text, reasoning, and tool calls. */
