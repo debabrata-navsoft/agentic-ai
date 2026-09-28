@@ -97,3 +97,5 @@ To reinstall everything:
 cd backend && .venv/bin/pip install -r requirements.txt
 The httpx line can come out of requirements.txt, since the tests use httpx2, which the SDK already installs. Should I remove it?
 ```
+
+cd backend && .venv/bin/pip install -r requirements.txt
