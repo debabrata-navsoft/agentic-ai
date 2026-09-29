@@ -3,10 +3,28 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import {
-  AgentEvent, DocumentList, Health, KnowledgeDocument, Note, SessionDetail, SessionSummary, ToolInfo,
+  AgentEvent,
+  DocumentList,
+  Health,
+  KnowledgeDocument,
+  Note,
+  SessionDetail,
+  SessionSummary,
+  ToolInfo,
+  User,
 } from '../models/chat.models';
 
 const API = '/api';
+
+/** A failed `fetch()` request, carrying the HTTP status like HttpErrorResponse does. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class AgentApi {
@@ -19,6 +37,20 @@ export class AgentApi {
   private del(path: string) {
     return firstValueFrom(this.http.delete<void>(API + path));
   }
+
+  private post<T>(path: string, body: unknown) {
+    return firstValueFrom(this.http.post<T>(API + path, body));
+  }
+
+  // The login is an httpOnly cookie on /api, so these calls never handle a token themselves.
+  me = () => this.get<User>('/auth/me');
+  login = (email: string, password: string) => this.post<User>('/auth/login', { email, password });
+  signup = (name: string, email: string, password: string) =>
+    this.post<User>('/auth/signup', { name, email, password });
+  logout = () => this.post<void>('/auth/logout', {});
+  users = () => this.get<User[]>('/admin/users');
+  updateUser = (id: string, patch: Partial<Pick<User, 'role' | 'disabled'>>) =>
+    firstValueFrom(this.http.patch<User>(`${API}/admin/users/${id}`, patch));
 
   health = () => this.get<Health>('/health');
   tools = () => this.get<ToolInfo[]>('/tools');
@@ -50,7 +82,7 @@ export class AgentApi {
     });
     if (!res.ok || !res.body) {
       const detail = await res.json().catch(() => null);
-      throw new Error(detail?.detail ?? `Request failed (${res.status})`);
+      throw new ApiError(detail?.detail ?? `Request failed (${res.status})`, res.status);
     }
 
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();

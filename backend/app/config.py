@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,10 @@ class Settings(BaseSettings):
     """Runtime configuration. Every field can be overridden with an AGENT_* env var."""
 
     model_config = SettingsConfigDict(env_prefix="AGENT_", env_file=".env", extra="ignore")
+
+    # Read from ANTHROPIC_API_KEY (env or .env). pydantic-settings doesn't export .env values to
+    # os.environ, so the SDK only sees this key if we pass it explicitly (see main.py).
+    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
 
     model: str = "claude-opus-5"
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "high"
@@ -28,9 +33,18 @@ class Settings(BaseSettings):
     # RAG uploads
     max_upload_mb: int = 20
 
+    # Accounts. The first account to sign up becomes admin.
+    allow_signup: bool = True
+    login_days: int = 7
+    # Send the login cookie over HTTPS only. Turn on in production (plain-HTTP dev can't use it).
+    cookie_secure: bool = False
+
     @property
     def db_path(self) -> Path:
         return self.data_dir / "agent.db"
+
+    def user_workspace(self, user_id: str) -> Path:
+        return self.workspace_dir / user_id
 
     @property
     def vector_db_path(self) -> Path:

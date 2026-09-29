@@ -13,10 +13,20 @@ REGISTRY = build_registry()
 
 
 @pytest.fixture
-def ctx(tmp_path):
+def store(tmp_path):
+    return Store(tmp_path / "test.db")
+
+
+@pytest.fixture
+def user(store):
+    return store.create_user("ada@example.com", "Ada", "unused-hash")
+
+
+@pytest.fixture
+def ctx(tmp_path, store, user):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    return ToolContext(store=Store(tmp_path / "test.db"), workspace=workspace)
+    return ToolContext(store=store, workspace=workspace, user_id=user["id"])
 
 
 def run_tool(ctx: ToolContext, name: str, args: dict) -> tuple[str, bool]:

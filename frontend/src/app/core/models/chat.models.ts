@@ -83,6 +83,15 @@ export interface ToolInfo {
   server: boolean;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'user' | 'admin';
+  disabled: boolean;
+  created_at: string;
+}
+
 export interface Health {
   model: string;
   effort: string;

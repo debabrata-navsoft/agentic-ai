@@ -1,0 +1,126 @@
+<aside class="showcase">
+  <div class="brand">
+    <div class="logo">S</div>
+    <span class="brand-name">Synora</span>
+  </div>
+  <div class="pitch">
+    <h2>An AI agent that plans, uses tools, and gets things done.</h2>
+    <ul>
+      @for (f of features; track f.title) {
+        <li>
+          <span class="feature-icon"><svg [lucideIcon]="f.icon" size="18"></svg></span>
+          <div>
+            <strong>{{ f.title }}</strong>
+            <p>{{ f.text }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </div>
+  <p class="fineprint">Your chats, memory and documents are private to your account.</p>
+</aside>
+
+<main class="panel">
+  <form class="card" (submit)="submit($event)">
+    <div class="logo big">S</div>
+    <h1>{{ mode() === 'signin' ? 'Welcome back' : 'Create your account' }}</h1>
+    <p class="sub">
+      {{
+        mode() === 'signin' ? 'Sign in to continue to Synora.' : 'Start working with your AI agent.'
+      }}
+    </p>
+
+    <div class="switch" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [class.active]="mode() === 'signin'"
+        (click)="setMode('signin')"
+      >
+        Sign in
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.active]="mode() === 'signup'"
+        (click)="setMode('signup')"
+      >
+        Sign up
+      </button>
+    </div>
+
+    @if (formError() ?? auth.error(); as err) {
+      <div class="alert" role="alert">{{ err }}</div>
+    }
+
+    @if (mode() === 'signup') {
+      <label>
+        <span>Name</span>
+        <input
+          name="name"
+          autocomplete="name"
+          required
+          maxlength="80"
+          placeholder="Ada Lovelace"
+          [value]="name()"
+          (input)="name.set(value($event))"
+        />
+      </label>
+    }
+
+    <label>
+      <span>Email</span>
+      <input
+        name="email"
+        type="email"
+        autocomplete="email"
+        required
+        placeholder="you@example.com"
+        [value]="email()"
+        (input)="email.set(value($event))"
+      />
+    </label>
+
+    <label>
+      <span>Password</span>
+      <div class="password">
+        <input
+          name="password"
+          required
+          [type]="showPassword() ? 'text' : 'password'"
+          [attr.minlength]="mode() === 'signup' ? 8 : null"
+          [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'"
+          [placeholder]="mode() === 'signup' ? 'At least 8 characters' : '••••••••'"
+          [value]="password()"
+          (input)="password.set(value($event))"
+        />
+        <button
+          type="button"
+          class="reveal"
+          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          [title]="showPassword() ? 'Hide password' : 'Show password'"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <svg [lucideIcon]="showPassword() ? 'eye-off' : 'eye'" size="18"></svg>
+        </button>
+      </div>
+    </label>
+
+    <button class="primary" type="submit" [disabled]="busy()">
+      @if (busy()) {
+        <span class="spinner"></span>
+      }
+      {{ mode() === 'signin' ? 'Sign in' : 'Create account' }}
+    </button>
+
+    <p class="alt">
+      @if (mode() === 'signin') {
+        New to Synora?
+        <button type="button" class="link" (click)="setMode('signup')">Create an account</button>
+      } @else {
+        Already have an account?
+        <button type="button" class="link" (click)="setMode('signin')">Sign in</button>
+      }
+    </p>
+  </form>
+</main>

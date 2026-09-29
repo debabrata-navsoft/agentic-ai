@@ -19,14 +19,14 @@ class SearchKnowledgeInput(ToolInput):
 
 
 def search_knowledge_base(args: SearchKnowledgeInput, ctx: ToolContext) -> str:
-    hits = _kb(ctx).search(args.query, args.top_k)
+    hits = _kb(ctx).search(ctx.user_id, args.query, args.top_k)
     if not hits:
         return "No relevant passages found. The knowledge base may be empty."
     return json.dumps(hits, indent=2, ensure_ascii=False)
 
 
 def list_documents(args: ToolInput, ctx: ToolContext) -> str:
-    docs = _kb(ctx).list_documents()
+    docs = _kb(ctx).list_documents(ctx.user_id)
     if not docs:
         return "No documents uploaded."
     return "\n".join(f"- {d['name']} ({d['chunks']} chunks, uploaded {d['created_at']})" for d in docs)

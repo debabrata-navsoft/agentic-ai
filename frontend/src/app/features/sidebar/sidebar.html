@@ -1,17 +1,23 @@
 <div class="brand">
-  <div class="logo">A</div>
+  <div class="logo">S</div>
   <div>
     <div class="brand-name">Synora</div>
     <div class="brand-sub">Agentic AI assistant</div>
   </div>
 </div>
 
-<button class="new-chat" (click)="store.newChat()" [disabled]="store.running()">+ New chat</button>
+<button class="new-chat" (click)="store.newChat()" [disabled]="store.running()">
+  <svg lucideIcon="plus" size="16"></svg> New chat
+</button>
 
-<nav class="tabs">
-  @for (t of tabs; track t.id) {
+<nav class="nav">
+  @for (t of tabs(); track t.id) {
     <button [class.active]="tab() === t.id" (click)="tab.set(t.id)">
-      {{ t.label }} @if (t.count) { <span class="count">{{ t.count() }}</span> }
+      <svg [lucideIcon]="t.icon" size="16"></svg>
+      <span class="nav-label">{{ t.label }}</span>
+      @if (t.count) {
+        <span class="count">{{ t.count() }}</span>
+      }
     </button>
   }
 </nav>
@@ -19,11 +25,21 @@
 <div class="list">
   @switch (tab()) {
     @case ('chats') {
-      @for (s of store.sessions(); track s.id) {
-        <div class="item" [class.active]="s.id === store.currentId()" (click)="store.open(s.id)">
-          <span class="item-title truncate">{{ s.title }}</span>
-          <button class="icon" title="Delete chat" (click)="$event.stopPropagation(); store.deleteSession(s.id)">✕</button>
-        </div>
+      @for (g of chatGroups(); track g.label) {
+        <div class="mono-label group">{{ g.label }}</div>
+        @for (s of g.sessions; track s.id) {
+          <div class="item" [class.active]="s.id === store.currentId()" (click)="store.open(s.id)">
+            <svg lucideIcon="message-square-text" size="14"></svg>
+            <span class="item-title truncate">{{ s.title }}</span>
+            <button
+              class="icon"
+              title="Delete chat"
+              (click)="$event.stopPropagation(); store.deleteSession(s.id)"
+            >
+              <svg lucideIcon="trash" size="13"></svg>
+            </button>
+          </div>
+        }
       } @empty {
         <p class="empty">No conversations yet.</p>
       }
@@ -40,8 +56,12 @@
         @if (store.uploading(); as name) {
           <span>Indexing {{ name }}…</span>
         } @else {
+          <svg lucideIcon="upload" size="18"></svg>
           <strong>Upload documents</strong>
-          <span>Drop PDF, Markdown, text or code files. Synora searches them to answer questions (RAG).</span>
+          <span
+            >Drop PDF, Markdown, text or code files. Synora searches them to answer questions
+            (RAG).</span
+          >
         }
       </label>
       @if (store.uploadError(); as err) {
@@ -51,12 +71,20 @@
         <div class="card">
           <div class="card-head">
             <strong class="truncate">{{ d.name }}</strong>
-            <button class="icon" title="Remove from knowledge base" (click)="store.deleteDocument(d.id)">✕</button>
+            <button
+              class="icon"
+              title="Remove from knowledge base"
+              (click)="store.deleteDocument(d.id)"
+            >
+              <svg lucideIcon="trash" size="13"></svg>
+            </button>
           </div>
           <p>{{ formatSize(d.size) }} · {{ d.chunks }} chunk{{ d.chunks === 1 ? '' : 's' }}</p>
         </div>
       } @empty {
-        @if (!store.uploading()) { <p class="empty">No documents yet.</p> }
+        @if (!store.uploading()) {
+          <p class="empty">No documents yet.</p>
+        }
       }
     }
     @case ('memory') {
@@ -64,12 +92,16 @@
         <div class="card">
           <div class="card-head">
             <strong>{{ n.title }}</strong>
-            <button class="icon" title="Forget" (click)="store.deleteNote(n.id)">✕</button>
+            <button class="icon" title="Forget" (click)="store.deleteNote(n.id)">
+              <svg lucideIcon="trash" size="13"></svg>
+            </button>
           </div>
           <p>{{ n.content }}</p>
           @if (n.tags.length) {
             <div class="tags">
-              @for (t of n.tags; track t) { <span>#{{ t }}</span> }
+              @for (t of n.tags; track t) {
+                <span>#{{ t }}</span>
+              }
             </div>
           }
         </div>
@@ -82,15 +114,34 @@
         <div class="card">
           <div class="card-head">
             <strong>{{ t.label }}</strong>
-            @if (t.server) { <span class="badge">hosted</span> }
+            @if (t.server) {
+              <span class="badge">hosted</span>
+            }
           </div>
           <p>{{ t.description }}</p>
         </div>
       }
     }
+    @case ('users') {
+      <app-user-admin />
+    }
   }
 </div>
 
-@if (store.health(); as h) {
-  <div class="model"><span class="dot"></span>{{ h.model }} · effort {{ h.effort }}</div>
-}
+<footer class="foot">
+  @if (store.health(); as h) {
+    <div class="status"><span class="dot"></span>Connected: {{ h.model }}</div>
+  }
+  @if (auth.user(); as u) {
+    <div class="account">
+      <div class="avatar">{{ initial() }}</div>
+      <div class="who">
+        <div class="truncate name">{{ u.name }}</div>
+        <div class="truncate sub">{{ auth.isAdmin() ? 'Admin' : 'Workspace' }} · {{ u.email }}</div>
+      </div>
+      <button class="sign-out" title="Sign out" aria-label="Sign out" (click)="auth.logout()">
+        <svg lucideIcon="log-out" size="16"></svg>
+      </button>
+    </div>
+  }
+</footer>

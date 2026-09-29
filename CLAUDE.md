@@ -39,11 +39,32 @@ Backend tests never call the real API. `tests/test_agent.py` drives the real Ant
 ### Request flow
 
 `POST /api/chat` (`app/api.py`) loads the session's stored message history, appends the user message, and
-returns an `EventSourceResponse` wrapping `Agent.run(messages)` (`app/agent/loop.py`). `Agent.run` is an
+returns an `EventSourceResponse` wrapping `Agent.run(messages, ctx)` (`app/agent/loop.py`). The route
+builds `ctx`, a per-user `ToolContext`, for each run. `Agent.run` is an
 async generator: each iteration streams one model call through `client.beta.messages.stream(...)`,
 translates SDK stream events into UI events, runs requested client tools concurrently, appends the turn to
 `messages` **in place**, and loops until the model stops calling tools or `AGENT_MAX_ITERATIONS` is hit.
 The `finally` block in the route always persists `messages` to SQLite.
+
+### Accounts and authorization
+
+- `app/auth.py` owns accounts: scrypt password hashing (stdlib, no dependency), the auth/admin routes, and
+  the `CurrentUser` / `AdminUser` FastAPI dependencies. Every route except `/api/health` and `/api/auth/*`
+  takes `user: CurrentUser`.
+- A login is a random token in the httpOnly `synora_session` cookie (path `/api`). Only its SHA-256 is
+  stored (`auth_tokens`), so logout and disabling a user revoke it immediately. The frontend never handles
+  the token; same-origin requests (via the dev proxy) carry the cookie.
+- Roles are `user` and `admin`. The first account to sign up becomes admin and claims pre-account data:
+  rows with a NULL `user_id` (`Store.create_user`) and loose workspace files (`claim_legacy_workspace`).
+  Admins can't change their own role or status, so at least one admin always remains.
+- Everything user-owned is scoped by `user_id`. `Store` methods take `user_id` first. Another user's
+  session or note is reported as 404, not 403. Tools read `ctx.user_id`, and each user's file workspace is
+  `AGENT_WORKSPACE_DIR/<user_id>`.
+- RAG ownership lives in SQLite only. `KnowledgeBase.search` restricts Chroma with
+  `where={"doc_id": {"$in": <user's doc ids>}}`, so Chroma metadata has no user field.
+- Frontend: `AuthStore` holds `user`/`ready`. `App` shows `AuthPage` until signed in and resets and
+  reloads `ChatStore` when the user ID changes. `authInterceptor` (HttpClient) and `ApiError.status === 401`
+  (the `fetch`-based chat) call `AuthStore.expire()`.
 
 ### The SSE event protocol is a cross-stack contract
 
@@ -110,7 +131,8 @@ The loop handles these stop reasons:
     `Tool.run` validates with Pydantic and turns failures into `is_error` tool_results.
   - Handlers are plain sync functions, and `Tool.run` runs them in a worker thread. Raise `ToolError`
     for an expected, model-visible error.
-  - Handlers get a `ToolContext` (`store`, `workspace`, `kb`).
+  - Handlers get a `ToolContext` (`store`, `workspace`, `user_id`, `kb`), built per run. Always pass
+    `ctx.user_id` to `Store`/`KnowledgeBase` calls.
 - To add a tool:
   1. Add the `Tool` to its module's `TOOLS` list. Its `label` is what the UI shows, served via
      `/api/tools`, so there is no frontend change.
@@ -128,7 +150,8 @@ The loop handles these stop reasons:
 ### Persistence and RAG
 
 - `app/store.py` is one SQLite connection (`check_same_thread=False`, guarded by a lock) with tables
-  `sessions` (history JSON), `notes` (long-term memory shared across all sessions), and `documents` (RAG
+  `users`, `auth_tokens`, `sessions` (history JSON), `notes` (long-term memory shared across one user's
+  sessions), and `documents` (RAG
   document metadata).
 - RAG (`app/rag/`) splits storage across two stores: document metadata goes in SQLite, and chunk text plus
   vectors go in ChromaDB (`data/chroma`). Chunk IDs are `"{doc_id}:{i}"` with `doc_id` in the metadata for
@@ -159,6 +182,9 @@ The loop handles these stop reasons:
 - `/api/chat` is POST, so `AgentApi.chat` reads the SSE body from `fetch()` and parses frames by hand
   (`parseSseFrame`), because `EventSource` only supports GET. It normalizes sse-starlette's `\r\n` and
   skips `:` keep-alive comments. Everything else uses `HttpClient`.
+- Icons are `@lucide/angular`, used by name (`<svg lucideIcon="file-text">`, with the component importing
+  `LucideDynamicIcon`). Every name must be listed in `core/icons.ts` (`APP_ICONS`). `app.config.ts` and
+  `app.spec.ts` both register that list, since TestBed doesn't load the app config.
 - Styles:
   - Component styles are scoped. `src/styles.css` holds only theme variables and rules shared across
     components.

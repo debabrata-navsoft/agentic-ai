@@ -1,8 +1,16 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import { AgentApi } from './agent-api';
+import { AgentApi, ApiError } from './agent-api';
+import { AuthStore } from './auth-store';
 import {
-  AgentEvent, AssistantMessage, ChatMessage, Health, KnowledgeDocument, Note, SessionSummary, ToolInfo,
+  AgentEvent,
+  AssistantMessage,
+  ChatMessage,
+  Health,
+  KnowledgeDocument,
+  Note,
+  SessionSummary,
+  ToolInfo,
 } from '../models/chat.models';
 import { reduceEvent } from '../utils/reduce-event';
 
@@ -11,6 +19,7 @@ const NOTE_TOOLS = new Set(['save_note', 'delete_note']);
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly api = inject(AgentApi);
+  private readonly auth = inject(AuthStore);
   private abort: AbortController | null = null;
 
   readonly sessions = signal<SessionSummary[]>([]);
@@ -20,6 +29,8 @@ export class ChatStore {
   readonly notes = signal<Note[]>([]);
   readonly tools = signal<ToolInfo[]>([]);
   readonly health = signal<Health | null>(null);
+  /** Round-trip time of the startup health check. */
+  readonly latencyMs = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   readonly documents = signal<KnowledgeDocument[]>([]);
   readonly supportedTypes = signal<string[]>([]);
@@ -35,13 +46,34 @@ export class ChatStore {
 
   async init() {
     try {
-      const [health, tools] = await Promise.all([this.api.health(), this.api.tools()]);
+      const started = performance.now();
+      const timedHealth = this.api.health().then((h) => {
+        this.latencyMs.set(Math.round(performance.now() - started));
+        return h;
+      });
+      const [health, tools] = await Promise.all([timedHealth, this.api.tools()]);
       this.health.set(health);
       this.tools.set(tools);
       await Promise.all([this.refreshSessions(), this.refreshNotes(), this.refreshDocuments()]);
     } catch {
-      this.error.set('Cannot reach the backend. Start it with: uvicorn app.main:app --port 8000');
+      if (this.auth.user()) {
+        this.error.set('Cannot reach the backend. Start it with: uvicorn app.main:app --port 8000');
+      }
     }
+  }
+
+  /** Forget everything loaded for the previous user (on sign-out). */
+  reset() {
+    this.abort?.abort();
+    this.sessions.set([]);
+    this.currentId.set(null);
+    this.messages.set([]);
+    this.notes.set([]);
+    this.tools.set([]);
+    this.latencyMs.set(null);
+    this.documents.set([]);
+    this.error.set(null);
+    this.uploadError.set(null);
   }
 
   async refreshSessions() {
@@ -137,10 +169,13 @@ export class ChatStore {
     try {
       await this.api.chat(text, this.currentId(), onEvent, this.abort.signal);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) return this.auth.expire();
       const aborted = e instanceof DOMException && e.name === 'AbortError';
-      queue.push(aborted
-        ? { event: 'notice', data: { message: 'Stopped.' } }
-        : { event: 'error', data: { message: (e as Error).message } });
+      queue.push(
+        aborted
+          ? { event: 'notice', data: { message: 'Stopped.' } }
+          : { event: 'error', data: { message: (e as Error).message } },
+      );
     } finally {
       cancelAnimationFrame(frame);
       flush();
@@ -154,6 +189,8 @@ export class ChatStore {
   }
 
   private patchLastAssistant(fn: (msg: AssistantMessage) => AssistantMessage) {
-    this.messages.update((m) => [...m.slice(0, -1), fn(m.at(-1) as AssistantMessage)]);
+    const last = this.messages().at(-1);
+    if (last?.role !== 'assistant') return; // cleared by reset() while a run was in flight
+    this.messages.update((m) => [...m.slice(0, -1), fn(last)]);
   }
 }

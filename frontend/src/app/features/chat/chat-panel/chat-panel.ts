@@ -1,24 +1,46 @@
-import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { LucideDynamicIcon } from '@lucide/angular';
 
 import { ChatStore } from '../../../core/services/chat-store';
 import { Message } from '../message/message';
 
-/** The main conversation area: header, message thread, welcome screen, and composer. */
+/** The main conversation area: top bar, message thread, welcome screen, and composer. */
 @Component({
   selector: 'app-chat-panel',
-  imports: [Message],
+  imports: [LucideDynamicIcon, Message],
   templateUrl: './chat-panel.html',
   styleUrl: './chat-panel.css',
 })
 export class ChatPanel {
   protected readonly store = inject(ChatStore);
   protected readonly draft = signal('');
+  protected readonly showRuntime = signal(true);
   protected readonly suggestions = [
-    'Research the latest stable Python release and summarize what changed, with sources.',
-    'Remember that I prefer concise answers and I work mostly in Python and Angular.',
-    'What is the compound interest on ₹2,50,000 at 7.5% for 12 years? Show the math.',
-    'Summarize the documents in my knowledge base and list the key facts from each.',
+    {
+      icon: 'globe',
+      label: 'Web search & docs',
+      text: 'Research the latest stable Python release and summarize what changed, with sources.',
+    },
+    {
+      icon: 'brain',
+      label: 'Memory retention',
+      text: 'Remember that I prefer concise answers and I work mostly in Python and Angular.',
+    },
+    {
+      icon: 'calculator',
+      label: 'Symbolic math',
+      text: 'What is the compound interest on ₹2,50,000 at 7.5% for 12 years? Show the math.',
+    },
+    {
+      icon: 'file-search',
+      label: 'Vector synthesis',
+      text: 'Summarize the documents in my knowledge base and list the key facts from each.',
+    },
   ];
+
+  /** Rough draft size: ~4 characters per token for English text. */
+  protected readonly draftTokens = computed(() => Math.ceil(this.draft().trim().length / 4));
+  protected readonly accept = computed(() => this.store.supportedTypes().join(','));
 
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
@@ -57,5 +79,12 @@ export class ChatPanel {
     this.draft.set(el.value);
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+  }
+
+  /** The composer's "+" adds files to the knowledge base, same as the Docs tab. */
+  protected onAttach(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    this.store.upload(Array.from(input.files ?? []));
+    input.value = '';
   }
 }

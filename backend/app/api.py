@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent.loop import close_dangling_tool_calls
+from app.auth import CurrentUser
 from app.rag import SUPPORTED_EXTENSIONS, UnsupportedFileError
+from app.tools import ToolContext
 from app.transcript import to_transcript
 
 log = logging.getLogger(__name__)
@@ -42,8 +44,9 @@ def _error_message(exc: Exception) -> str:
     return f"Unexpected error: {type(exc).__name__}: {exc}"
 
 
-def _session_or_404(request: Request, session_id: str) -> dict:
-    session = request.app.state.store.get_session(session_id)
+def _session_or_404(request: Request, user: dict, session_id: str) -> dict:
+    # Another user's session is reported as missing, not forbidden, so IDs don't leak.
+    session = request.app.state.store.get_session(user["id"], session_id)
     if session is None:
         raise HTTPException(404, "Session not found")
     return session
@@ -60,65 +63,67 @@ async def health(request: Request):
 
 
 @router.get("/tools")
-async def list_tools(request: Request):
+async def list_tools(request: Request, _: CurrentUser):
     return request.app.state.agent.catalog
 
 
 @router.get("/sessions")
-async def list_sessions(request: Request):
-    return request.app.state.store.list_sessions()
+async def list_sessions(request: Request, user: CurrentUser):
+    return request.app.state.store.list_sessions(user["id"])
 
 
 @router.post("/sessions", status_code=201)
-async def create_session(request: Request):
-    return request.app.state.store.create_session()
+async def create_session(request: Request, user: CurrentUser):
+    return request.app.state.store.create_session(user["id"])
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str, request: Request):
-    session = _session_or_404(request, session_id)
+async def get_session(session_id: str, request: Request, user: CurrentUser):
+    session = _session_or_404(request, user, session_id)
     session["messages"] = to_transcript(session["messages"])
     return session
 
 
 @router.patch("/sessions/{session_id}")
-async def rename_session(session_id: str, body: RenameRequest, request: Request):
-    if not request.app.state.store.rename_session(session_id, body.title):
+async def rename_session(session_id: str, body: RenameRequest, request: Request, user: CurrentUser):
+    if not request.app.state.store.rename_session(user["id"], session_id, body.title):
         raise HTTPException(404, "Session not found")
     return {"id": session_id, "title": body.title}
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
-async def delete_session(session_id: str, request: Request):
-    if not request.app.state.store.delete_session(session_id):
+async def delete_session(session_id: str, request: Request, user: CurrentUser):
+    if not request.app.state.store.delete_session(user["id"], session_id):
         raise HTTPException(404, "Session not found")
 
 
 @router.get("/notes")
-async def list_notes(request: Request, q: str = ""):
-    return request.app.state.store.search_notes(q, limit=100)
+async def list_notes(request: Request, user: CurrentUser, q: str = ""):
+    return request.app.state.store.search_notes(user["id"], q, limit=100)
 
 
 @router.delete("/notes/{note_id}", status_code=204)
-async def delete_note(note_id: int, request: Request):
-    if not request.app.state.store.delete_note(note_id):
+async def delete_note(note_id: int, request: Request, user: CurrentUser):
+    if not request.app.state.store.delete_note(user["id"], note_id):
         raise HTTPException(404, "Note not found")
 
 
 @router.get("/documents")
-async def list_documents(request: Request):
-    return {"documents": request.app.state.kb.list_documents(), "supported": sorted(SUPPORTED_EXTENSIONS)}
+async def list_documents(request: Request, user: CurrentUser):
+    return {"documents": request.app.state.kb.list_documents(user["id"]), "supported": sorted(SUPPORTED_EXTENSIONS)}
 
 
 @router.post("/documents", status_code=201)
-async def upload_document(file: UploadFile, request: Request):
+async def upload_document(file: UploadFile, request: Request, user: CurrentUser):
     max_bytes = request.app.state.settings.max_upload_mb * 1024 * 1024
     data = await file.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise HTTPException(413, f"File is larger than {request.app.state.settings.max_upload_mb} MB")
     try:
         # Parsing and embedding are CPU-bound; keep them off the event loop.
-        return await asyncio.to_thread(request.app.state.kb.add_document, file.filename or "upload.txt", data)
+        return await asyncio.to_thread(
+            request.app.state.kb.add_document, user["id"], file.filename or "upload.txt", data
+        )
     except UnsupportedFileError as e:
         raise HTTPException(415, str(e))
     except ValueError as e:
@@ -126,17 +131,21 @@ async def upload_document(file: UploadFile, request: Request):
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
-async def delete_document(doc_id: str, request: Request):
-    if not await asyncio.to_thread(request.app.state.kb.delete_document, doc_id):
+async def delete_document(doc_id: str, request: Request, user: CurrentUser):
+    if not await asyncio.to_thread(request.app.state.kb.delete_document, user["id"], doc_id):
         raise HTTPException(404, "Document not found")
 
 
 @router.post("/chat")
-async def chat(body: ChatRequest, request: Request):
+async def chat(body: ChatRequest, request: Request, user: CurrentUser):
     store = request.app.state.store
     agent = request.app.state.agent
+    settings = request.app.state.settings
 
-    session = _session_or_404(request, body.session_id) if body.session_id else {**store.create_session(), "messages": []}
+    if body.session_id:
+        session = _session_or_404(request, user, body.session_id)
+    else:
+        session = {**store.create_session(user["id"]), "messages": []}
 
     session_id = session["id"]
     if session_id in _active_sessions:
@@ -145,16 +154,20 @@ async def chat(body: ChatRequest, request: Request):
     messages = session["messages"]
     if not messages:
         title = body.message.strip().splitlines()[0][:60]
-        store.rename_session(session_id, title)
+        store.rename_session(user["id"], session_id, title)
         session["title"] = title
     messages.append({"role": "user", "content": body.message})
     start_len = len(messages)
+
+    workspace = settings.user_workspace(user["id"])
+    workspace.mkdir(parents=True, exist_ok=True)
+    ctx = ToolContext(store=store, workspace=workspace, user_id=user["id"], kb=request.app.state.kb)
 
     async def events():
         _active_sessions.add(session_id)
         try:
             yield _sse("session", {"id": session_id, "title": session["title"]})
-            async for ev in agent.run(messages):
+            async for ev in agent.run(messages, ctx):
                 yield _sse(ev["event"], ev["data"])
         except Exception as exc:
             log.exception("agent run failed")

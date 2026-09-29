@@ -13,7 +13,7 @@ Python Backend
    ├── Agent             app/agent/loop.py      understand → choose tool → execute → observe → repeat
    ├── LLM               Claude (claude-opus-5, adaptive thinking)
    ├── Tools             app/tools/             web search/fetch, calculator, clock, files
-   ├── Memory            app/tools/memory.py    long-term notes shared across chats
+   ├── Memory            app/tools/memory.py    long-term notes shared across a user's chats
    └── RAG               app/rag/               upload → chunk → embed → retrieve
         ├── Database     SQLite                 sessions, notes, document metadata
         └── Vector DB    ChromaDB               chunk embeddings (local all-MiniLM-L6-v2)
@@ -113,8 +113,17 @@ cd frontend && npx ng test --watch=false
 
 ## API
 
+Every route except `/api/health` and `/api/auth/*` requires a signed-in user. Each user sees only
+their own sessions, notes, documents and workspace files.
+
 | Method | Path | Purpose |
 |---|---|---|
+| `POST` | `/api/auth/signup` | `{name, email, password}` → create an account and sign in (the first account becomes admin) |
+| `POST` | `/api/auth/login` | `{email, password}` → sets the httpOnly `synora_session` cookie |
+| `POST` | `/api/auth/logout` | Revoke the current login |
+| `GET` | `/api/auth/me` | The signed-in user (401 if signed out) |
+| `GET` | `/api/admin/users` | Admin: list accounts |
+| `PATCH` | `/api/admin/users/{id}` | Admin: `{role?, disabled?}`; disabling revokes the user's logins |
 | `POST` | `/api/chat` | `{message, session_id?}` → SSE stream of agent events |
 | `GET` | `/api/sessions` | List conversations |
 | `GET` / `PATCH` / `DELETE` | `/api/sessions/{id}` | Read transcript / rename / delete |
@@ -133,7 +142,10 @@ SSE events: `session`, `step_start`, `text`, `thinking`, `tool_start`, `tool_inp
 All settings are environment variables. See `backend/.env.example`:
 `AGENT_MODEL`, `AGENT_EFFORT` (`low`…`max`), `AGENT_MAX_TOKENS`, `AGENT_MAX_ITERATIONS`,
 `AGENT_ENABLE_WEB_TOOLS`, `AGENT_ENABLE_FALLBACKS`, `AGENT_DATA_DIR`, `AGENT_WORKSPACE_DIR`,
-`AGENT_CORS_ORIGINS`.
+`AGENT_CORS_ORIGINS`, `AGENT_ALLOW_SIGNUP`, `AGENT_LOGIN_DAYS`, `AGENT_COOKIE_SECURE`.
+
+Set `AGENT_COOKIE_SECURE=true` when serving over HTTPS. Set `AGENT_ALLOW_SIGNUP=false` to stop
+new sign-ups once the admin account exists.
 
 Server-side refusal fallbacks are on by default: if Claude's safety classifiers decline a request,
 the API re-runs it on a recommended fallback model instead of returning a refusal.

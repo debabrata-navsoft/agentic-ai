@@ -61,16 +61,16 @@ def agent_and_requests(tmp_path, ctx):
 
     client = AsyncAnthropic(api_key="test", http_client=DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)))
     settings = Settings(data_dir=tmp_path, workspace_dir=tmp_path, enable_web_tools=False)
-    agent = Agent(client, settings, build_registry(), ctx)
-    return agent, requests
+    agent = Agent(client, settings, build_registry())
+    return agent, ctx, requests
 
 
 def test_agent_runs_tool_and_finishes(agent_and_requests):
-    agent, requests = agent_and_requests
+    agent, ctx, requests = agent_and_requests
     messages = [{"role": "user", "content": "What is 6*7?"}]
 
     async def collect():
-        return [e async for e in agent.run(messages)]
+        return [e async for e in agent.run(messages, ctx)]
 
     events = asyncio.run(collect())
     names = [e["event"] for e in events]

@@ -70,11 +70,10 @@ def close_dangling_tool_calls(messages: list[dict[str, Any]]) -> None:
 
 
 class Agent:
-    def __init__(self, client: AsyncAnthropic, settings: Settings, registry: ToolRegistry, ctx: ToolContext):
+    def __init__(self, client: AsyncAnthropic, settings: Settings, registry: ToolRegistry):
         self.client = client
         self.settings = settings
         self.registry = registry
-        self.ctx = ctx
         web = settings.enable_web_tools
         self.tools = registry.definitions() + (SERVER_TOOLS if web else [])
         self.catalog = registry.catalog() + (SERVER_TOOL_CATALOG if web else [])
@@ -95,8 +94,11 @@ class Agent:
             kwargs["fallbacks"] = "default"
         return kwargs
 
-    async def run(self, messages: list[dict[str, Any]]) -> AsyncIterator[Event]:
-        """Run until the model stops calling tools. Appends every turn to `messages` in place."""
+    async def run(self, messages: list[dict[str, Any]], ctx: ToolContext) -> AsyncIterator[Event]:
+        """Run until the model stops calling tools. Appends every turn to `messages` in place.
+
+        `ctx` scopes client tools to the user who owns the conversation.
+        """
         usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0}
         json_retries = 0
         step = 0
@@ -155,7 +157,7 @@ class Agent:
                 # Tool input was cut off; a truncated input still parses, so don't run it.
                 results = [("Tool input was truncated by max_tokens; retry with less input.", True)] * len(tool_uses)
             else:
-                results = await asyncio.gather(*(self._run_tool(b) for b in tool_uses))
+                results = await asyncio.gather(*(self._run_tool(b, ctx) for b in tool_uses))
 
             tool_results = []
             for block, (output, is_error) in zip(tool_uses, results):
@@ -169,12 +171,12 @@ class Agent:
 
         yield _event("done", stop_reason=stop_reason, usage=usage, steps=step + 1)
 
-    async def _run_tool(self, block: Any) -> tuple[str, bool]:
+    async def _run_tool(self, block: Any, ctx: ToolContext) -> tuple[str, bool]:
         tool = self.registry.get(block.name)
         if tool is None:
             return f"Unknown tool: {block.name}", True
         log.info("tool %s %s", block.name, block.input)
-        return await tool.run(block.input, self.ctx)
+        return await tool.run(block.input, ctx)
 
     @staticmethod
     def _translate(ev: Any) -> Event | None:

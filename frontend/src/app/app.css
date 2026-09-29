@@ -1,6 +1,18 @@
-:host { display: grid; grid-template-columns: 290px 1fr; height: 100vh; }
+:host {
+  display: block;
+  min-height: 100vh;
+}
+:host(.signed-in) {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  height: 100vh;
+}
 
 @media (max-width: 760px) {
-  :host { grid-template-columns: 1fr; }
-  app-sidebar { display: none; }
+  :host(.signed-in) {
+    grid-template-columns: 1fr;
+  }
+  app-sidebar {
+    display: none;
+  }
 }

@@ -10,7 +10,8 @@ export function reduceEvent(msg: AssistantMessage, ev: AgentEvent): AssistantMes
   const parts = [...msg.parts];
   const last = parts.at(-1);
   const d = ev.data;
-  const notice = (tone: NoticePart['tone'], text: string) => parts.push({ type: 'notice', tone, text });
+  const notice = (tone: NoticePart['tone'], text: string) =>
+    parts.push({ type: 'notice', tone, text });
 
   switch (ev.event) {
     case 'step_start':
@@ -25,11 +26,23 @@ export function reduceEvent(msg: AssistantMessage, ev: AgentEvent): AssistantMes
     case 'tool_result': {
       const i = parts.findIndex((p) => p.type === 'tool' && p.id === d.id);
       const patch: Partial<ToolPart> =
-        ev.event === 'tool_start' ? { name: d.name, server: d.server }
-        : ev.event === 'tool_input' ? { input: d.input }
-        : { output: d.output, is_error: d.is_error };
+        ev.event === 'tool_start'
+          ? { name: d.name, server: d.server }
+          : ev.event === 'tool_input'
+            ? { input: d.input }
+            : { output: d.output, is_error: d.is_error };
       if (i >= 0) parts[i] = { ...(parts[i] as ToolPart), ...patch };
-      else parts.push({ type: 'tool', id: d.id, name: '', server: false, input: null, output: null, is_error: false, ...patch });
+      else
+        parts.push({
+          type: 'tool',
+          id: d.id,
+          name: '',
+          server: false,
+          input: null,
+          output: null,
+          is_error: false,
+          ...patch,
+        });
       break;
     }
     case 'step_discard':

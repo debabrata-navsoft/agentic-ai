@@ -1,6 +1,7 @@
 """Vector store for RAG: document chunks embedded and indexed in ChromaDB.
 
-Document metadata lives in SQLite (see Store); the chunk text and vectors live in Chroma.
+Document metadata (including the owning user) lives in SQLite (see Store); the chunk text
+and vectors live in Chroma.
 Embeddings are computed here and passed to Chroma explicitly, so the embedder is swappable.
 """
 
@@ -44,13 +45,13 @@ class KnowledgeBase:
             vectors.extend(self._embed_fn(texts[i : i + EMBED_BATCH]))
         return vectors
 
-    def add_document(self, filename: str, data: bytes) -> dict[str, Any]:
+    def add_document(self, user_id: str, filename: str, data: bytes) -> dict[str, Any]:
         text = extract_text(filename, data)
         chunks = chunk_text(text)
         if not chunks:
             raise ValueError(f"No text could be extracted from '{filename}'")
 
-        doc = self._store.add_document(filename, size=len(data), chunks=len(chunks))
+        doc = self._store.add_document(user_id, filename, size=len(data), chunks=len(chunks))
         try:
             self._collection.add(
                 ids=[f"{doc['id']}:{i}" for i in range(len(chunks))],
@@ -59,26 +60,29 @@ class KnowledgeBase:
                 metadatas=[{"doc_id": doc["id"], "source": filename, "chunk": i} for i in range(len(chunks))],
             )
         except Exception:
-            self._store.delete_document(doc["id"])
+            self._store.delete_document(user_id, doc["id"])
             raise
         return doc
 
-    def delete_document(self, doc_id: str) -> bool:
-        if not self._store.delete_document(doc_id):
+    def delete_document(self, user_id: str, doc_id: str) -> bool:
+        if not self._store.delete_document(user_id, doc_id):
             return False
         self._collection.delete(where={"doc_id": doc_id})
         return True
 
-    def list_documents(self) -> list[dict[str, Any]]:
-        return self._store.list_documents()
+    def list_documents(self, user_id: str) -> list[dict[str, Any]]:
+        return self._store.list_documents(user_id)
 
-    def search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
-        n = self._collection.count()
+    def search(self, user_id: str, query: str, top_k: int = 5) -> list[dict[str, Any]]:
+        # Ownership lives in SQLite, so restrict the vector search to this user's documents.
+        docs = self._store.list_documents(user_id)
+        n = sum(d["chunks"] for d in docs)
         if not n:
             return []
         res = self._collection.query(
             query_embeddings=self._embed([query]),
             n_results=min(top_k, n),
+            where={"doc_id": {"$in": [d["id"] for d in docs]}},
             include=["documents", "metadatas", "distances"],
         )
         return [

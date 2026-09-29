@@ -1,9 +1,11 @@
 @let m = message();
 @if (m.role === 'user') {
-  <div class="msg user"><div class="bubble">{{ m.text }}</div></div>
+  <div class="msg user">
+    <div class="bubble">{{ m.text }}</div>
+  </div>
 } @else {
   <div class="msg assistant">
-    <div class="logo small">A</div>
+    <div class="logo small">S</div>
     <div class="body">
       @for (part of m.parts; track $index) {
         @switch (part.type) {
@@ -24,7 +26,9 @@
                 </span>
                 <span class="tool-name">{{ label(part.name) }}</span>
                 <span class="tool-arg truncate">{{ preview(part) }}</span>
-                @if (part.server) { <span class="badge">hosted</span> }
+                @if (part.server) {
+                  <span class="badge">hosted</span>
+                }
               </summary>
               @if (part.input) {
                 <div class="io-label">Input</div>
@@ -47,9 +51,10 @@
       @if (m.usage) {
         <div class="meta">
           {{ m.steps }} step{{ m.steps === 1 ? '' : 's' }} ·
-          {{ m.usage.input_tokens + m.usage.cache_read_input_tokens }} in
-          ({{ m.usage.cache_read_input_tokens }} cached) ·
-          {{ m.usage.output_tokens }} out
+          {{ m.usage.input_tokens + m.usage.cache_read_input_tokens }} in ({{
+            m.usage.cache_read_input_tokens
+          }}
+          cached) · {{ m.usage.output_tokens }} out
         </div>
       }
     </div>

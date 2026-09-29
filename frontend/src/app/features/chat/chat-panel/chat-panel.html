@@ -1,23 +1,59 @@
 <header class="topbar">
-  <h1 class="truncate">{{ store.currentTitle() }}</h1>
-  @if (store.running()) { <span class="working">Agent working…</span> }
+  <div class="crumbs">
+    <div class="logo small">S</div>
+    <span>Synora Workspace</span>
+    <svg lucideIcon="chevron-right" size="14"></svg>
+    <span class="current truncate">{{ store.currentTitle() }}</span>
+  </div>
+  <div class="top-right">
+    @if (store.running()) {
+      <span class="chip working"><span class="dot"></span>Agent working…</span>
+    }
+  </div>
 </header>
 
 <section class="messages" #scroller>
   @if (store.error(); as err) {
-    <div class="banner">{{ err }}</div>
+    <div class="banner error">{{ err }}</div>
   }
 
   @if (!store.messages().length) {
+    @if (showRuntime() && store.health(); as h) {
+      <div class="banner runtime">
+        <span class="dot"></span>
+        <strong>Runtime connected</strong>
+        <span class="mono">· {{ h.model }} · effort {{ h.effort }}</span>
+        @if (store.latencyMs() !== null) {
+          <span class="chip"><svg lucideIcon="zap" size="11"></svg>{{ store.latencyMs() }}ms</span>
+        }
+        <button class="close" aria-label="Dismiss" (click)="showRuntime.set(false)">
+          <svg lucideIcon="x" size="14"></svg>
+        </button>
+      </div>
+    }
+
     <div class="welcome">
-      <div class="logo big">A</div>
+      <div class="logo big">S</div>
       <h2>What should we work on?</h2>
       <p>Synora plans, searches the web, calculates, remembers, and writes files, step by step.</p>
       <div class="suggestions">
-        @for (s of suggestions; track s) {
-          <button (click)="submit(s)">{{ s }}</button>
+        @for (s of suggestions; track s.label) {
+          <button (click)="submit(s.text)">
+            <span class="s-icon"><svg [lucideIcon]="s.icon" size="16"></svg></span>
+            <span class="s-body">
+              <span class="mono-label">{{ s.label }}</span>
+              <span class="s-text">{{ s.text }}</span>
+            </span>
+          </button>
         }
       </div>
+      @if (store.tools().length) {
+        <div class="tool-chips">
+          @for (t of store.tools(); track t.name) {
+            <span class="chip">{{ t.label }}</span>
+          }
+        </div>
+      }
     </div>
   }
 
@@ -30,17 +66,46 @@
 
 <footer class="composer">
   <div class="composer-box">
-    <textarea
-      rows="1"
-      placeholder="Message Synora…  (Enter to send, Shift+Enter for a new line)"
-      [value]="draft()"
-      (input)="onInput($event)"
-      (keydown)="onKeydown($event)"
-    ></textarea>
-    @if (store.running()) {
-      <button class="send stop" (click)="store.stop()" title="Stop">■</button>
-    } @else {
-      <button class="send" (click)="submit()" [disabled]="!draft().trim()" title="Send">↑</button>
-    }
+    <div class="input-row">
+      <label class="attach" title="Add documents to your knowledge base">
+        <input type="file" multiple hidden [accept]="accept()" (change)="onAttach($event)" />
+        <svg lucideIcon="plus" size="18"></svg>
+      </label>
+      <textarea
+        rows="1"
+        placeholder="Message Synora…  (Enter to send, Shift+Enter for a new line)"
+        [value]="draft()"
+        (input)="onInput($event)"
+        (keydown)="onKeydown($event)"
+      ></textarea>
+      @if (store.running()) {
+        <button class="send stop" (click)="store.stop()" title="Stop" aria-label="Stop">
+          <svg lucideIcon="square" size="14"></svg>
+        </button>
+      } @else {
+        <button
+          class="send"
+          (click)="submit()"
+          [disabled]="!draft().trim()"
+          title="Send"
+          aria-label="Send"
+        >
+          <svg lucideIcon="arrow-up" size="18"></svg>
+        </button>
+      }
+    </div>
+    <div class="meta-row">
+      @if (store.uploading(); as name) {
+        <span class="chip">Indexing {{ name }}…</span>
+      }
+      <span class="tokens">≈ {{ draftTokens() }} tokens</span>
+    </div>
   </div>
+  @if (store.uploadError(); as err) {
+    <p class="hint error">{{ err }}</p>
+  } @else {
+    <p class="hint">
+      Synora can search the web, run tools and write files. Check important results.
+    </p>
+  }
 </footer>

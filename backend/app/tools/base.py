@@ -19,8 +19,11 @@ class ToolInput(BaseModel):
 
 @dataclass
 class ToolContext:
+    """Per-run context: tools only ever touch the data and workspace of `user_id`."""
+
     store: Store
     workspace: Path
+    user_id: str
     kb: "KnowledgeBase | None" = None
 
 

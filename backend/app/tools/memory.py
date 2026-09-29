@@ -1,4 +1,4 @@
-"""Long-term memory: notes persist in SQLite and are shared across all chat sessions."""
+"""Long-term memory: notes persist in SQLite and are shared across a user's chat sessions."""
 
 import json
 
@@ -14,7 +14,7 @@ class SaveNoteInput(ToolInput):
 
 
 def save_note(args: SaveNoteInput, ctx: ToolContext) -> str:
-    note = ctx.store.add_note(args.title, args.content, args.tags)
+    note = ctx.store.add_note(ctx.user_id, args.title, args.content, args.tags)
     return f"Saved note #{note['id']}: {note['title']}"
 
 
@@ -24,7 +24,7 @@ class SearchNotesInput(ToolInput):
 
 
 def search_notes(args: SearchNotesInput, ctx: ToolContext) -> str:
-    notes = ctx.store.search_notes(args.query, args.limit)
+    notes = ctx.store.search_notes(ctx.user_id, args.query, args.limit)
     if not notes:
         return "No matching notes."
     return json.dumps(notes, indent=2)
@@ -35,7 +35,7 @@ class DeleteNoteInput(ToolInput):
 
 
 def delete_note(args: DeleteNoteInput, ctx: ToolContext) -> str:
-    if not ctx.store.delete_note(args.note_id):
+    if not ctx.store.delete_note(ctx.user_id, args.note_id):
         raise ToolError(f"Note #{args.note_id} not found")
     return f"Deleted note #{args.note_id}"
 
