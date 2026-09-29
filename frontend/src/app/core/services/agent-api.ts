@@ -36,10 +36,6 @@ export class AgentApi {
     return firstValueFrom(this.http.post<KnowledgeDocument>(`${API}/documents`, form));
   }
 
-  /**
-   * POST a message and stream the agent's events. EventSource only supports GET,
-   * so this reads the SSE body from fetch() and parses it by hand.
-   */
   async chat(
     message: string,
     sessionId: string | null,
