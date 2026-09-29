@@ -1,7 +1,7 @@
 <div class="brand">
   <div class="logo">A</div>
   <div>
-    <div class="brand-name">Atlas</div>
+    <div class="brand-name">Synora</div>
     <div class="brand-sub">Agentic AI assistant</div>
   </div>
 </div>
@@ -41,7 +41,7 @@
           <span>Indexing {{ name }}…</span>
         } @else {
           <strong>Upload documents</strong>
-          <span>Drop PDF, Markdown, text or code files. Atlas searches them to answer questions (RAG).</span>
+          <span>Drop PDF, Markdown, text or code files. Synora searches them to answer questions (RAG).</span>
         }
       </label>
       @if (store.uploadError(); as err) {
@@ -74,7 +74,7 @@
           }
         </div>
       } @empty {
-        <p class="empty">Nothing remembered yet. Ask Atlas to remember something.</p>
+        <p class="empty">Nothing remembered yet. Ask Synora to remember something.</p>
       }
     }
     @case ('tools') {

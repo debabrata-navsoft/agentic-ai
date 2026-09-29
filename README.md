@@ -1,4 +1,4 @@
-# Atlas — Agentic AI Assistant
+# Synora — Agentic AI Assistant
 
 A full-stack agentic AI app: a **FastAPI** backend runs a Claude-powered agent loop with tools,
 memory, and RAG, and an **Angular** frontend streams the agent's reasoning, tool calls, and answers live.

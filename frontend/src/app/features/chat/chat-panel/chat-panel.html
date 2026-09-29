@@ -12,7 +12,7 @@
     <div class="welcome">
       <div class="logo big">A</div>
       <h2>What should we work on?</h2>
-      <p>Atlas plans, searches the web, calculates, remembers, and writes files, step by step.</p>
+      <p>Synora plans, searches the web, calculates, remembers, and writes files, step by step.</p>
       <div class="suggestions">
         @for (s of suggestions; track s) {
           <button (click)="submit(s)">{{ s }}</button>
@@ -32,7 +32,7 @@
   <div class="composer-box">
     <textarea
       rows="1"
-      placeholder="Message Atlas…  (Enter to send, Shift+Enter for a new line)"
+      placeholder="Message Synora…  (Enter to send, Shift+Enter for a new line)"
       [value]="draft()"
       (input)="onInput($event)"
       (keydown)="onKeydown($event)"

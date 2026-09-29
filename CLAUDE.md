@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Atlas is an agentic AI assistant: a Python/FastAPI backend runs a Claude tool-use loop (tools, long-term
+Synora is an agentic AI assistant: a Python/FastAPI backend runs a Claude tool-use loop (tools, long-term
 memory, RAG over uploaded documents) and streams it over SSE to an Angular 21 chat UI. See README.md for
 the user-facing overview and API table.
 

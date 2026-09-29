@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     await client.close()
 
 
-app = FastAPI(title="Atlas Agent API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Synora Agent API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
