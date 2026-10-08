@@ -250,7 +250,11 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
             yield _sse("error", {"message": _error_message(exc)})
         finally:
             close_dangling_tool_calls(messages)
-            store.save_messages(session_id, messages)
+            if messages:
+                store.save_messages(session_id, messages)
+            else:
+                # The first message failed outright; don't leave an empty chat in the sidebar.
+                store.delete_session(user["id"], session_id)
             _active_sessions.discard(session_id)
 
     return EventSourceResponse(events())

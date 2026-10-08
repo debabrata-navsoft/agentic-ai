@@ -68,3 +68,15 @@ def test_session_remembers_its_agent(app, store):
     session = store.create_session(user_id, agent_id=agent["id"])
     assert ada.get("/api/sessions").json()[0]["agent_id"] == agent["id"]
     assert ada.get(f"/api/sessions/{session['id']}").json()["agent_id"] == agent["id"]
+
+
+def test_failed_first_message_leaves_no_empty_chat(app):
+    async def failing_run(messages, ctx, profile=None):
+        raise RuntimeError("no credentials")
+        yield  # makes this an async generator
+
+    app.state.agent.run = failing_run
+    ada = signup(app, "ada@example.com")
+    res = ada.post("/api/chat", json={"message": "hi"})
+    assert "event: error" in res.text
+    assert ada.get("/api/sessions").json() == []

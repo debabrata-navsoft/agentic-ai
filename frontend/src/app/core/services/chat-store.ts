@@ -236,8 +236,10 @@ export class ChatStore {
       this.patchLastAssistant((msg) => ({ ...msg, running: false }));
       this.running.set(false);
       this.abort = null;
-      // The run may have created or renamed the session, or changed memory.
-      this.refreshSessions();
+      // The run may have created, renamed, or (if its first message failed) deleted the session.
+      this.refreshSessions().then(() => {
+        if (!this.sessions().some((s) => s.id === this.currentId())) this.currentId.set(null);
+      });
       if (touchedNotes) this.refreshNotes();
     }
   }
