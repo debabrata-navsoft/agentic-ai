@@ -1,8 +1,5 @@
 <header class="topbar">
   <div class="crumbs">
-    <div class="logo small">S</div>
-    <span>Synora Workspace</span>
-    <svg lucideIcon="chevron-right" size="14"></svg>
     <span class="current truncate">{{ store.currentTitle() }}</span>
     @if (store.currentAgent(); as agent) {
       <span class="chip agent-chip" [title]="agent.description">
@@ -23,19 +20,6 @@
   }
 
   @if (!store.messages().length) {
-    @if (showRuntime() && store.health(); as h) {
-      <div class="banner runtime">
-        <span class="dot"></span>
-        <strong>Runtime connected</strong>
-        <span class="mono">· {{ h.model }} · effort {{ h.effort }}</span>
-        @if (store.latencyMs() !== null) {
-          <span class="chip"><svg lucideIcon="zap" size="11"></svg>{{ store.latencyMs() }}ms</span>
-        }
-        <button class="close" aria-label="Dismiss" (click)="showRuntime.set(false)">
-          <svg lucideIcon="x" size="14"></svg>
-        </button>
-      </div>
-    }
 
     <div class="welcome">
       <div class="logo big">S</div>

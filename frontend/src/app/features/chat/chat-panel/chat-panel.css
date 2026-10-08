@@ -75,32 +75,6 @@
   background: color-mix(in srgb, var(--err) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--err) 40%, transparent);
 }
-.banner.runtime {
-  background: var(--panel);
-  border: 1px solid var(--border);
-}
-.banner .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 6px var(--ok);
-}
-.banner .mono {
-  flex: 1;
-  font: 12px var(--mono);
-  color: var(--muted);
-}
-.close {
-  display: grid;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  padding: 2px;
-}
-.close:hover {
-  color: var(--text);
-}
 
 .welcome {
   text-align: center;
@@ -452,10 +426,6 @@ textarea::placeholder {
 @media (max-width: 760px) {
   .prompt-types-grid {
     grid-template-columns: 1fr;
-  }
-  .crumbs > span:first-of-type,
-  .crumbs > svg {
-    display: none;
   }
   .prompt-types-bar {
     overflow-x: auto;

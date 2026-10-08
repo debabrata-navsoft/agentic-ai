@@ -29,7 +29,6 @@ const MAX_ATTACHMENTS = 10; // matches the backend
 export class ChatPanel {
   protected readonly store = inject(ChatStore);
   protected readonly draft = signal('');
-  protected readonly showRuntime = signal(true);
   protected readonly attachments = signal<OutgoingAttachment[]>([]);
   protected readonly previews = computed(() => this.attachments().map(toDisplay));
   protected readonly attachError = signal<string | null>(null);

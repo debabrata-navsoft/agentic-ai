@@ -36,8 +36,6 @@ export class ChatStore {
   readonly notes = signal<Note[]>([]);
   readonly tools = signal<ToolInfo[]>([]);
   readonly health = signal<Health | null>(null);
-  /** Round-trip time of the startup health check. */
-  readonly latencyMs = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   readonly agents = signal<AgentProfile[]>([]);
   /** The agent for the open chat, or for the next new chat; null is plain Synora. */
@@ -59,12 +57,7 @@ export class ChatStore {
 
   async init() {
     try {
-      const started = performance.now();
-      const timedHealth = this.api.health().then((h) => {
-        this.latencyMs.set(Math.round(performance.now() - started));
-        return h;
-      });
-      const [health, tools] = await Promise.all([timedHealth, this.api.tools()]);
+      const [health, tools] = await Promise.all([this.api.health(), this.api.tools()]);
       this.health.set(health);
       this.tools.set(tools);
       await Promise.all([
@@ -88,7 +81,6 @@ export class ChatStore {
     this.messages.set([]);
     this.notes.set([]);
     this.tools.set([]);
-    this.latencyMs.set(null);
     this.documents.set([]);
     this.agents.set([]);
     this.agentId.set(null);
