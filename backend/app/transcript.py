@@ -29,6 +29,18 @@ def summarize_server_result(block: dict[str, Any]) -> tuple[str, bool]:
     return block.get("type", ""), False
 
 
+def _attachment(block: dict[str, Any]) -> dict[str, Any] | None:
+    """Display info for a file the user attached (see app/attachments.py), or None."""
+    source = block.get("source") or {}
+    if block.get("type") == "image" and source.get("type") == "base64":
+        url = f"data:{source['media_type']};base64,{source['data']}"
+        return {"name": "image", "media_type": source["media_type"], "url": url}
+    if block.get("type") == "document":
+        media_type = "application/pdf" if source.get("type") == "base64" else "text/plain"
+        return {"name": block.get("title") or "document", "media_type": media_type}
+    return None
+
+
 def to_transcript(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     tools_by_id: dict[str, dict[str, Any]] = {}
@@ -47,8 +59,13 @@ def to_transcript(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     tools_by_id[b["tool_use_id"]].update(
                         output=result[:MAX_RESULT_PREVIEW], is_error=b.get("is_error", False)
                     )
-            if texts := [b["text"] for b in content if b.get("type") == "text"]:
-                out.append({"role": "user", "text": "\n".join(texts)})
+            texts = [b["text"] for b in content if b.get("type") == "text"]
+            attachments = [a for b in content if (a := _attachment(b))]
+            if texts or attachments:
+                entry: dict[str, Any] = {"role": "user", "text": "\n".join(texts)}
+                if attachments:
+                    entry["attachments"] = attachments
+                out.append(entry)
             continue
 
         if not out or out[-1]["role"] != "assistant":

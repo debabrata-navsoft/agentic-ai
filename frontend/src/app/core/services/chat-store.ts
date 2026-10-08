@@ -9,9 +9,11 @@ import {
   Health,
   KnowledgeDocument,
   Note,
+  OutgoingAttachment,
   SessionSummary,
   ToolInfo,
 } from '../models/chat.models';
+import { toDisplay } from '../utils/attachments';
 import { reduceEvent } from '../utils/reduce-event';
 
 const NOTE_TOOLS = new Set(['save_note', 'delete_note']);
@@ -147,15 +149,16 @@ export class ChatStore {
     this.abort?.abort();
   }
 
-  async send(text: string) {
+  async send(text: string, attachments: OutgoingAttachment[] = []) {
     text = text.trim();
-    if (!text || this.running()) return;
+    if ((!text && !attachments.length) || this.running()) return;
 
     this.error.set(null);
     this.running.set(true);
     this.abort = new AbortController();
     const assistant: AssistantMessage = { role: 'assistant', parts: [], running: true };
-    this.messages.update((m) => [...m, { role: 'user', text }, assistant]);
+    const user = { role: 'user' as const, text, attachments: attachments.map(toDisplay) };
+    this.messages.update((m) => [...m, user, assistant]);
 
     // Tokens arrive far faster than the screen refreshes; apply them once per frame so
     // each message re-renders (and re-parses its Markdown) at most ~60 times a second.
@@ -176,7 +179,7 @@ export class ChatStore {
     };
 
     try {
-      await this.api.chat(text, this.currentId(), onEvent, this.abort.signal);
+      await this.api.chat(text, attachments, this.currentId(), onEvent, this.abort.signal);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) return this.auth.expire();
       const aborted = e instanceof DOMException && e.name === 'AbortError';

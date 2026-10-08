@@ -73,7 +73,6 @@ describe('App', () => {
   it('shows the chat and the account once signed in', async () => {
     const { el } = await render(ADA);
     expect(el.querySelector('.welcome h2')?.textContent).toContain('What should we work on?');
-    expect(el.querySelectorAll('.suggestions button').length).toBe(4);
     expect(el.querySelector('.nav')?.textContent).toContain('Tools');
   });
 });

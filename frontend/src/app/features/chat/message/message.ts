@@ -1,5 +1,6 @@
 import { JsonPipe } from '@angular/common';
 import { Component, inject, input } from '@angular/core';
+import { LucideDynamicIcon } from '@lucide/angular';
 
 import { ChatMessage, ToolPart } from '../../../core/models/chat.models';
 import { ChatStore } from '../../../core/services/chat-store';
@@ -8,7 +9,7 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
 /** One chat message: a user bubble, or an assistant turn with text, reasoning, and tool calls. */
 @Component({
   selector: 'app-message',
-  imports: [MarkdownPipe, JsonPipe],
+  imports: [MarkdownPipe, JsonPipe, LucideDynamicIcon],
   templateUrl: './message.html',
   styleUrl: './message.css',
 })

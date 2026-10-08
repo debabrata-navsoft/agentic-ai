@@ -28,9 +28,24 @@ export interface NoticePart {
 
 export type Part = TextPart | ToolPart | NoticePart;
 
+/** A file attached to a user message, as displayed (`url` is set for images). */
+export interface Attachment {
+  name: string;
+  media_type: string;
+  url?: string;
+}
+
+/** A file attached to an outgoing message: base64 content without the `data:` prefix. */
+export interface OutgoingAttachment {
+  name: string;
+  media_type: string;
+  data: string;
+}
+
 export interface UserMessage {
   role: 'user';
   text: string;
+  attachments?: Attachment[];
 }
 
 export interface Usage {

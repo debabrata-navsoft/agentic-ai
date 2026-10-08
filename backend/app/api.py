@@ -4,10 +4,11 @@ import logging
 
 import anthropic
 from fastapi import APIRouter, HTTPException, Request, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent.loop import close_dangling_tool_calls
+from app.attachments import MAX_ATTACHMENTS, Attachment, AttachmentError, user_content
 from app.auth import CurrentUser
 from app.rag import SUPPORTED_EXTENSIONS, UnsupportedFileError
 from app.tools import ToolContext
@@ -21,8 +22,15 @@ _active_sessions: set[str] = set()
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=100_000)
+    message: str = Field(default="", max_length=100_000)
+    attachments: list[Attachment] = Field(default_factory=list, max_length=MAX_ATTACHMENTS)
     session_id: str | None = None
+
+    @model_validator(mode="after")
+    def _not_empty(self):
+        if not self.message.strip() and not self.attachments:
+            raise ValueError("Send a message or attach a file")
+        return self
 
 
 class RenameRequest(BaseModel):
@@ -142,6 +150,12 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
     agent = request.app.state.agent
     settings = request.app.state.settings
 
+    # Validate attachments before creating a session for them.
+    try:
+        content = user_content(body.message, body.attachments, settings.max_upload_mb * 1024 * 1024)
+    except AttachmentError as e:
+        raise HTTPException(422, str(e))
+
     if body.session_id:
         session = _session_or_404(request, user, body.session_id)
     else:
@@ -153,10 +167,10 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
 
     messages = session["messages"]
     if not messages:
-        title = body.message.strip().splitlines()[0][:60]
+        title = (body.message.strip() or body.attachments[0].name).splitlines()[0][:60]
         store.rename_session(user["id"], session_id, title)
         session["title"] = title
-    messages.append({"role": "user", "content": body.message})
+    messages.append({"role": "user", "content": content})
     start_len = len(messages)
 
     workspace = settings.user_workspace(user["id"])

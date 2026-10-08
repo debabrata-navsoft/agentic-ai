@@ -1,7 +1,23 @@
 @let m = message();
 @if (m.role === 'user') {
   <div class="msg user">
-    <div class="bubble">{{ m.text }}</div>
+    @if (m.attachments?.length) {
+      <div class="attachments">
+        @for (a of m.attachments; track $index) {
+          @if (a.url) {
+            <img class="att-image" [src]="a.url" [alt]="a.name" />
+          } @else {
+            <span class="att-file" [title]="a.name">
+              <svg lucideIcon="file-text" size="15"></svg>
+              <span class="truncate">{{ a.name }}</span>
+            </span>
+          }
+        }
+      </div>
+    }
+    @if (m.text) {
+      <div class="bubble">{{ m.text }}</div>
+    }
   </div>
 } @else {
   <div class="msg assistant">

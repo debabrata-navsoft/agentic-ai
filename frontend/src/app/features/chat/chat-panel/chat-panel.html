@@ -35,19 +35,10 @@
     <div class="welcome">
       <div class="logo big">S</div>
       <h2>What should we work on?</h2>
-      <p>Select a prompt type below or describe your task. Synora plans, searches the web, executes code, remembers facts, and queries your documents.</p>
-
-      <div class="suggestions">
-        @for (s of suggestions; track s.label) {
-          <button (click)="submit(s.text)">
-            <span class="s-icon"><svg [lucideIcon]="s.icon" size="16"></svg></span>
-            <span class="s-body">
-              <span class="mono-label">{{ s.label }}</span>
-              <span class="s-text">{{ s.text }}</span>
-            </span>
-          </button>
-        }
-      </div>
+      <p>
+        Select a prompt type below or describe your task. Synora plans, searches the web, executes
+        code, remembers facts, and queries your documents.
+      </p>
 
       @if (store.tools().length) {
         <div class="tool-chips">
@@ -87,10 +78,34 @@
     </div>
 
     <!-- Composer Input Box -->
-    <div class="composer-box">
+    <div class="composer-box" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
+      @if (previews().length) {
+        <div class="attachments">
+          @for (a of previews(); track $index) {
+            <div class="att" [title]="a.name">
+              @if (a.url) {
+                <img [src]="a.url" [alt]="a.name" />
+              } @else {
+                <span class="att-file">
+                  <svg lucideIcon="file-text" size="16"></svg>
+                  <span class="truncate">{{ a.name }}</span>
+                </span>
+              }
+              <button
+                type="button"
+                class="att-remove"
+                (click)="removeAttachment($index)"
+                [attr.aria-label]="'Remove ' + a.name"
+              >
+                <svg lucideIcon="x" size="12"></svg>
+              </button>
+            </div>
+          }
+        </div>
+      }
       <div class="input-row">
-        <label class="attach" title="Add documents to your knowledge base">
-          <input type="file" multiple hidden [accept]="accept()" (change)="onAttach($event)" />
+        <label class="attach" title="Attach images, PDFs, or text files">
+          <input type="file" multiple hidden [accept]="accept()" (change)="onPick($event)" />
           <svg lucideIcon="plus" size="18"></svg>
         </label>
         <textarea
@@ -100,6 +115,7 @@
           [value]="draft()"
           (input)="onInput($event)"
           (keydown)="onKeydown($event)"
+          (paste)="onPaste($event)"
         ></textarea>
         @if (store.running()) {
           <button class="send stop" (click)="store.stop()" title="Stop" aria-label="Stop">
@@ -109,7 +125,7 @@
           <button
             class="send"
             (click)="submit()"
-            [disabled]="!draft().trim()"
+            [disabled]="!canSend()"
             title="Send (Enter)"
             aria-label="Send"
           >
@@ -120,20 +136,17 @@
       <div class="meta-row">
         <div class="active-mode-indicator">
           <span class="mode-dot"></span>
-          <span>Mode: <strong>{{ activePromptType().label }}</strong></span>
+          <span
+            >Mode: <strong>{{ activePromptType().label }}</strong></span
+          >
         </div>
-        @if (store.uploading(); as name) {
-          <span class="chip">Indexing {{ name }}…</span>
-        }
         <span class="tokens">≈ {{ draftTokens() }} tokens</span>
       </div>
     </div>
-    @if (store.uploadError(); as err) {
+    @if (attachError(); as err) {
       <p class="hint error">{{ err }}</p>
     } @else {
-      <p class="hint">
-        Shift + Enter for new line • Enter to send • Agentic multi-tool loop
-      </p>
+      <p class="hint">Shift + Enter for new line • Enter to send • Paste or drop files to attach</p>
     }
   </div>
 </footer>

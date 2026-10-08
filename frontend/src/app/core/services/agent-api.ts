@@ -8,6 +8,7 @@ import {
   Health,
   KnowledgeDocument,
   Note,
+  OutgoingAttachment,
   SessionDetail,
   SessionSummary,
   ToolInfo,
@@ -70,6 +71,7 @@ export class AgentApi {
 
   async chat(
     message: string,
+    attachments: OutgoingAttachment[],
     sessionId: string | null,
     onEvent: (ev: AgentEvent) => void,
     signal: AbortSignal,
@@ -77,12 +79,14 @@ export class AgentApi {
     const res = await fetch(`${API}/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-      body: JSON.stringify({ message, session_id: sessionId }),
+      body: JSON.stringify({ message, attachments, session_id: sessionId }),
       signal,
     });
     if (!res.ok || !res.body) {
-      const detail = await res.json().catch(() => null);
-      throw new ApiError(detail?.detail ?? `Request failed (${res.status})`, res.status);
+      const detail = (await res.json().catch(() => null))?.detail;
+      // FastAPI's own validation errors are a list; ours are a string.
+      const message = typeof detail === 'string' ? detail : (detail?.[0]?.msg ?? null);
+      throw new ApiError(message ?? `Request failed (${res.status})`, res.status);
     }
 
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
