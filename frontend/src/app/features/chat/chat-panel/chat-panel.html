@@ -20,7 +20,6 @@
   }
 
   @if (!store.messages().length) {
-
     <div class="welcome">
       <div class="logo big">S</div>
       <h2>What should we work on?</h2>
@@ -93,10 +92,15 @@
         </div>
       }
       <div class="input-row">
-        <label class="attach" title="Attach images, PDFs, or text files">
-          <input type="file" multiple hidden [accept]="accept()" (change)="onPick($event)" />
-          <svg lucideIcon="plus" size="18"></svg>
-        </label>
+        <app-composer-menu (attach)="filePicker.click()" />
+        <input
+          #filePicker
+          type="file"
+          multiple
+          hidden
+          [accept]="accept()"
+          (change)="onPick($event)"
+        />
         <textarea
           #textarea
           rows="1"
@@ -129,10 +133,13 @@
             >Mode: <strong>{{ activePromptType().label }}</strong></span
           >
         </div>
+        @if (store.uploading(); as name) {
+          <span class="chip">Indexing {{ name }}…</span>
+        }
         <span class="tokens">≈ {{ draftTokens() }} tokens</span>
       </div>
     </div>
-    @if (attachError(); as err) {
+    @if (attachError() ?? store.uploadError(); as err) {
       <p class="hint error">{{ err }}</p>
     } @else {
       <p class="hint">Shift + Enter for new line • Enter to send • Paste or drop files to attach</p>

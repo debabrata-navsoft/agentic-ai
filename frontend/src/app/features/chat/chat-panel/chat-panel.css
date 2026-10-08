@@ -282,7 +282,6 @@
   gap: 8px;
 }
 
-.attach,
 .send {
   display: grid;
   place-items: center;
@@ -291,15 +290,6 @@
   border-radius: 10px;
   flex-shrink: 0;
   border: 0;
-}
-
-.attach {
-  cursor: pointer;
-  color: var(--muted);
-  background: var(--panel-2);
-}
-.attach:hover {
-  color: var(--text);
 }
 
 .attachments {

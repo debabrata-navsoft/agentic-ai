@@ -4,6 +4,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 import { OutgoingAttachment } from '../../../core/models/chat.models';
 import { ChatStore } from '../../../core/services/chat-store';
 import { IMAGE_TYPES, readAttachment, toDisplay } from '../../../core/utils/attachments';
+import { ComposerMenu } from '../composer-menu/composer-menu';
 import { Message } from '../message/message';
 
 export interface PromptType {
@@ -22,7 +23,7 @@ const MAX_ATTACHMENTS = 10; // matches the backend
 /** The main conversation area: top bar, message thread, welcome screen, and composer with prompt types. */
 @Component({
   selector: 'app-chat-panel',
-  imports: [LucideDynamicIcon, Message],
+  imports: [LucideDynamicIcon, Message, ComposerMenu],
   templateUrl: './chat-panel.html',
   styleUrl: './chat-panel.css',
 })

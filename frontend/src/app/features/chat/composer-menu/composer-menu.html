@@ -1,0 +1,39 @@
+<button
+  type="button"
+  class="trigger"
+  title="Add files or start an agent chat"
+  aria-label="Add files or start an agent chat"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()"
+>
+  <svg lucideIcon="plus" size="18"></svg>
+</button>
+<input #kbPicker type="file" multiple hidden [accept]="kbAccept()" (change)="onKbPick($event)" />
+
+@if (open()) {
+  <div class="menu" role="menu">
+    <div class="items">
+      @for (item of items(); track $index) {
+        @if (item === firstAgent()) {
+          <div class="heading">New chat with agent</div>
+        }
+        <button type="button" role="menuitem" (click)="choose(item)">
+          <svg [lucideIcon]="item.icon" size="16"></svg>
+          <span class="label">{{ item.label }}</span>
+          <span class="hint truncate">{{ item.hint }}</span>
+        </button>
+      } @empty {
+        <p class="empty">No matches</p>
+      }
+    </div>
+    <input
+      #search
+      class="search"
+      placeholder="Type to search actions & agents"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      (keydown.enter)="items().length && choose(items()[0])"
+    />
+  </div>
+}

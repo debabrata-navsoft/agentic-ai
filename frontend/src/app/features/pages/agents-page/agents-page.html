@@ -34,8 +34,8 @@
         <span class="stat-lbl">Your Agents</span>
       </div>
       <div class="stat-card">
-        <span class="stat-num">{{ store.health()?.model ?? '—' }}</span>
-        <span class="stat-lbl">Underlying Model</span>
+        <span class="stat-num">{{ store.tools().length }}</span>
+        <span class="stat-lbl">Tools Available</span>
       </div>
       <div class="stat-card">
         <span class="stat-num">Multi-Tool</span>
@@ -88,7 +88,9 @@
                   <span class="badge role-badge">{{ agent.role }}</span>
                 }
               </div>
-              <span class="agent-engine">{{ store.health()?.model }}</span>
+              <span class="agent-engine">
+                {{ agent.tools.length }} {{ agent.tools.length === 1 ? 'tool' : 'tools' }}
+              </span>
             </div>
           </div>
 
