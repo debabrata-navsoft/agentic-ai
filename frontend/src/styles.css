@@ -108,43 +108,24 @@ code {
 
 /* Brand mark, shared by the sidebar, top bar, welcome screen, messages and auth page */
 .logo {
-  position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  font-weight: 800;
-  color: var(--on-accent);
   flex-shrink: 0;
 }
-.logo::after {
-  content: '';
-  position: absolute;
-  top: 18%;
-  right: 18%;
-  width: 16%;
-  height: 16%;
-  border-radius: 50%;
-  background: var(--on-accent);
-  opacity: 0.85;
+/* The "AI" in the Synora AI wordmark */
+.brand-ai {
+  color: #f97316;
 }
 .logo.small {
   width: 28px;
   height: 28px;
-  font-size: 13px;
-  border-radius: 8px;
 }
 .logo.big {
   width: 64px;
   height: 64px;
-  font-size: 28px;
-  border-radius: 18px;
   margin: 0 auto 18px;
-  box-shadow:
-    0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 10px 50px color-mix(in srgb, var(--accent) 55%, transparent);
+  filter: drop-shadow(0 8px 24px rgba(249, 115, 22, 0.35));
 }
 
 /* Small monospace pill: status tags, tool chips, composer meta */
