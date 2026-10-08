@@ -54,6 +54,26 @@ def to_block(att: Attachment, max_bytes: int) -> dict[str, Any]:
     return {"type": "document", "source": source, "title": att.name}
 
 
+def to_openai_content(content: str | list[dict[str, Any]]) -> str | list[dict[str, Any]]:
+    """The same user content as OpenAI Chat Completions parts. Text files have no file part there,
+    so they go inline in a <document> tag (which the transcript recognizes)."""
+    if isinstance(content, str):
+        return content
+    parts = []
+    for b in content:
+        source = b.get("source", {})
+        if b["type"] == "image":
+            parts.append({"type": "image_url", "image_url": {"url": f"data:{source['media_type']};base64,{source['data']}"}})
+        elif b["type"] == "document" and source["type"] == "base64":
+            data_url = f"data:application/pdf;base64,{source['data']}"
+            parts.append({"type": "file", "file": {"filename": b["title"], "file_data": data_url}})
+        elif b["type"] == "document":
+            parts.append({"type": "text", "text": f'<document name="{b["title"]}">\n{source["data"]}\n</document>'})
+        else:
+            parts.append(b)
+    return parts
+
+
 def user_content(text: str, attachments: list[Attachment], max_bytes: int) -> str | list[dict[str, Any]]:
     """A user message's `content`: plain text, or the attachment blocks followed by the text."""
     if not attachments:

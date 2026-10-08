@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS agents (
     description  TEXT NOT NULL DEFAULT '',
     instructions TEXT NOT NULL DEFAULT '',
     tools        TEXT NOT NULL DEFAULT '[]',
+    provider     TEXT NOT NULL DEFAULT '',
     created_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS agents_user ON agents (user_id);
@@ -88,7 +89,7 @@ def _user(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return None if row is None else {**dict(row), "disabled": bool(row["disabled"])}
 
 
-AGENT_FIELDS = ("name", "role", "icon", "description", "instructions", "tools")
+AGENT_FIELDS = ("name", "role", "icon", "description", "instructions", "tools", "provider")
 AGENT_COLUMNS = "id, " + ", ".join(AGENT_FIELDS) + ", created_at"
 
 
@@ -97,7 +98,7 @@ def _agent(row: sqlite3.Row | None) -> dict[str, Any] | None:
 
 
 def _agent_values(fields: dict[str, Any]) -> list[Any]:
-    return [json.dumps(fields[f]) if f == "tools" else fields[f] for f in AGENT_FIELDS]
+    return [json.dumps(fields["tools"]) if f == "tools" else fields.get(f, "") for f in AGENT_FIELDS]
 
 
 class Store:
@@ -114,9 +115,15 @@ class Store:
             if "user_id" not in columns:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT")
             self._conn.execute(f"CREATE INDEX IF NOT EXISTS {table}_user ON {table} (user_id)")
-        # The agent a chat runs as; NULL (older chats, or a deleted agent) means plain Synora.
-        if "agent_id" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(sessions)")}:
-            self._conn.execute("ALTER TABLE sessions ADD COLUMN agent_id TEXT")
+        # Columns added after release: the agent a chat runs as (NULL: plain Synora), the provider
+        # its history is written for (NULL: anthropic), and an agent's provider ('' = the default).
+        for table, column, decl in (
+            ("sessions", "agent_id", "TEXT"),
+            ("sessions", "provider", "TEXT"),
+            ("agents", "provider", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if column not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
+                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
         self._conn.commit()
 
     def _execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
@@ -235,14 +242,20 @@ class Store:
 
     # ---- sessions -------------------------------------------------------
 
-    def create_session(self, user_id: str, title: str = "New chat", agent_id: str | None = None) -> dict[str, Any]:
+    def create_session(
+        self, user_id: str, title: str = "New chat", agent_id: str | None = None, provider: str = "anthropic"
+    ) -> dict[str, Any]:
         session_id = uuid.uuid4().hex
         now = _now()
         self._execute(
-            "INSERT INTO sessions (id, user_id, title, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (session_id, user_id, title, agent_id, now, now),
+            "INSERT INTO sessions (id, user_id, title, agent_id, provider, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, user_id, title, agent_id, provider, now, now),
         )
-        return {"id": session_id, "title": title, "agent_id": agent_id, "created_at": now, "updated_at": now}
+        return {
+            "id": session_id, "title": title, "agent_id": agent_id, "provider": provider,
+            "created_at": now, "updated_at": now,
+        }
 
     def list_sessions(self, user_id: str) -> list[dict[str, Any]]:
         rows = self._execute(
@@ -253,13 +266,14 @@ class Store:
 
     def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
         row = self._execute(
-            "SELECT id, title, agent_id, created_at, updated_at, messages FROM sessions WHERE id = ? AND user_id = ?",
+            "SELECT id, title, agent_id, provider, created_at, updated_at, messages FROM sessions WHERE id = ? AND user_id = ?",
             (session_id, user_id),
         ).fetchone()
         if row is None:
             return None
         data = dict(row)
         data["messages"] = json.loads(data["messages"])
+        data["provider"] = data["provider"] or "anthropic"  # NULL: written before providers existed
         return data
 
     def save_messages(self, session_id: str, messages: list[dict[str, Any]]) -> None:

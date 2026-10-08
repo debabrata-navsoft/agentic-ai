@@ -3,7 +3,7 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AgentProfile } from '../../../core/models/chat.models';
 import { ChatStore } from '../../../core/services/chat-store';
-import { AgentEditor } from './agent-editor/agent-editor';
+import { AgentEditor, PROVIDER_NAMES } from './agent-editor/agent-editor';
 
 const GRADIENTS = [
   'linear-gradient(135deg, #3b82f6, #60a5fa)',
@@ -42,6 +42,11 @@ export class AgentsPage {
   /** Colors follow the agent's place in the full list, so filtering doesn't change them. */
   protected gradient(agent: AgentProfile) {
     return GRADIENTS[this.store.agents().indexOf(agent) % GRADIENTS.length];
+  }
+
+  protected providerName(agent: AgentProfile) {
+    const provider = agent.provider || this.store.health()?.default_provider;
+    return provider ? PROVIDER_NAMES[provider] : '';
   }
 
   protected toolLabel(name: string) {

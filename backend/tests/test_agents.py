@@ -20,7 +20,10 @@ def app(tmp_path, store):
     app.state.settings = Settings(data_dir=tmp_path, workspace_dir=tmp_path / "workspace")
     app.state.store = store
     app.state.kb = None
-    app.state.agent = SimpleNamespace(catalog=[{"name": n} for n in ALL_TOOLS])
+    app.state.agent = SimpleNamespace(
+        catalog=[{"name": n} for n in ALL_TOOLS], close_dangling=lambda messages: None, user_content=lambda c: c
+    )
+    app.state.runners = {"anthropic": app.state.agent}
     return app
 
 
@@ -80,3 +83,13 @@ def test_failed_first_message_leaves_no_empty_chat(app):
     res = ada.post("/api/chat", json={"message": "hi"})
     assert "event: error" in res.text
     assert ada.get("/api/sessions").json() == []
+
+
+def test_openai_agents_need_a_key(app):
+    ada = signup(app, "ada@example.com")
+    gpt = ada.post("/api/agents", json={"name": "GPT helper", "provider": "openai"}).json()
+    assert gpt["provider"] == "openai"
+    res = ada.post("/api/chat", json={"message": "hi", "agent_id": gpt["id"]})
+    assert res.status_code == 400 and "OPENAI_API_KEY" in res.json()["detail"]
+    assert ada.get("/api/sessions").json() == []  # no chat is created for a provider that isn't set up
+    assert ada.post("/api/agents", json={"name": "X", "provider": "other"}).status_code == 422

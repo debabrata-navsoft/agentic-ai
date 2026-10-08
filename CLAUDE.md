@@ -168,6 +168,19 @@ The loop handles these stop reasons:
   (`system_prompt()`), sends only the profile's tools (filtered, so order stays sorted), and rejects
   calls to any other tool. The profile is re-read every turn, so edits apply to existing chats.
 
+### Providers (Claude and OpenAI)
+
+- `app.state.runners` maps a provider to its loop: `"anthropic"` (`Agent`, always) and `"openai"`
+  (`OpenAIAgent` in `app/agent/openai_loop.py`, only when `OPENAI_API_KEY` is set).
+- A session's `provider` is fixed when it is created: the agent's `provider`, or else
+  `AGENT_DEFAULT_PROVIDER`. NULL means anthropic. Its history is stored in that provider's message
+  format, so the route uses the runner's `user_content` / `close_dangling` hooks and
+  `TRANSCRIPTS[provider]` (`to_transcript` / `openai_transcript`).
+- `OpenAIAgent` uses Chat Completions streaming and yields the same UI events as `Agent`. It has no
+  server tools (web search/fetch) and no thinking events. Tool results that are errors carry an
+  `Error: ` prefix, since Chat Completions tool messages have no error flag. `tests/test_openai.py`
+  drives the real `openai` SDK (also `httpx2`-based) against canned SSE.
+
 ### Persistence and RAG
 
 - `app/store.py` is one SQLite connection (`check_same_thread=False`, guarded by a lock) with tables

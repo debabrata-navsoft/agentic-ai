@@ -6,6 +6,7 @@ live from the SSE stream. The server-tool helpers here are shared with the agent
 live and reloaded sessions render identically.
 """
 
+import json
 from typing import Any
 
 MAX_RESULT_PREVIEW = 2000
@@ -89,4 +90,57 @@ def to_transcript(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
             elif is_server_result(kind) and b.get("tool_use_id") in tools_by_id:
                 output, is_error = summarize_server_result(b)
                 tools_by_id[b["tool_use_id"]].update(output=output, is_error=is_error)
+    return out
+
+
+def _openai_attachment(part: dict[str, Any]) -> dict[str, Any] | None:
+    """Display info for a file in an OpenAI user message (see attachments.to_openai_content)."""
+    if part.get("type") == "image_url":
+        url = part["image_url"]["url"]
+        return {"name": "image", "media_type": url[5 : url.find(";")], "url": url}
+    if part.get("type") == "file":
+        return {"name": part["file"].get("filename") or "document", "media_type": "application/pdf"}
+    text = part.get("text", "")
+    if part.get("type") == "text" and text.startswith('<document name="'):
+        return {"name": text[16 : text.find('">')], "media_type": "text/plain"}
+    return None
+
+
+def openai_transcript(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """`to_transcript` for sessions stored in OpenAI Chat Completions format."""
+    out: list[dict[str, Any]] = []
+    tools_by_id: dict[str, dict[str, Any]] = {}
+
+    for msg in messages:
+        role, content = msg["role"], msg.get("content")
+        if role == "tool":
+            if tool := tools_by_id.get(msg["tool_call_id"]):
+                is_error = content.startswith("Error: ")
+                tool.update(output=content.removeprefix("Error: ")[:MAX_RESULT_PREVIEW], is_error=is_error)
+            continue
+        if role == "user":
+            parts = [{"type": "text", "text": content}] if isinstance(content, str) else content
+            attachments = [a for p in parts if (a := _openai_attachment(p))]
+            texts = [p["text"] for p in parts if p.get("type") == "text" and not _openai_attachment(p)]
+            entry: dict[str, Any] = {"role": "user", "text": "\n".join(texts)}
+            if attachments:
+                entry["attachments"] = attachments
+            out.append(entry)
+            continue
+
+        if not out or out[-1]["role"] != "assistant":
+            out.append({"role": "assistant", "parts": []})
+        parts = out[-1]["parts"]
+        if content:
+            parts.append({"type": "text", "text": content})
+        for call in msg.get("tool_calls") or []:
+            try:
+                args = json.loads(call["function"]["arguments"] or "{}")
+            except ValueError:
+                args = call["function"]["arguments"]
+            tools_by_id[call["id"]] = tool = {
+                "type": "tool", "id": call["id"], "name": call["function"]["name"], "input": args,
+                "server": False, "output": None, "is_error": False,
+            }
+            parts.append(tool)
     return out

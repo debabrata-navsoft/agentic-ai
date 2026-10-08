@@ -81,6 +81,8 @@ export interface AgentInput {
   instructions: string;
   /** Tool names from /api/tools. */
   tools: string[];
+  /** '' runs on the app's default provider. */
+  provider: '' | Provider;
 }
 
 export interface AgentProfile extends AgentInput {
@@ -134,9 +136,14 @@ export interface User {
   created_at: string;
 }
 
+export type Provider = 'anthropic' | 'openai';
+
 export interface Health {
   model: string;
   effort: string;
+  /** Providers the backend has keys for. */
+  providers: Provider[];
+  default_provider: Provider;
 }
 
 /** An event from the backend's /api/chat SSE stream. */

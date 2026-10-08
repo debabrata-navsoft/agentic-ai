@@ -1,8 +1,10 @@
-import { Component, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 
-import { AgentInput, AgentProfile } from '../../../../core/models/chat.models';
+import { AgentInput, AgentProfile, Provider } from '../../../../core/models/chat.models';
 import { ChatStore } from '../../../../core/services/chat-store';
+
+export const PROVIDER_NAMES: Record<Provider, string> = { anthropic: 'Claude', openai: 'OpenAI' };
 
 const ICONS = ['bot', 'sparkles', 'globe', 'code', 'file-search', 'calculator', 'brain', 'wrench'];
 
@@ -19,12 +21,25 @@ export class AgentEditor {
 
   protected readonly store = inject(ChatStore);
   protected readonly icons = ICONS;
+  protected readonly providerNames = PROVIDER_NAMES;
+  protected readonly providers = ['anthropic', 'openai'] as const;
   /** A new agent starts blank, with every tool enabled. */
   protected readonly form = linkedSignal<AgentInput>(() => ({
-    ...{ name: '', role: '', icon: 'bot', description: '', instructions: '' },
+    ...{
+      name: '',
+      role: '',
+      icon: 'bot',
+      description: '',
+      instructions: '',
+      provider: '' as const,
+    },
     tools: this.store.tools().map((t) => t.name),
     ...this.agent(),
   }));
+  /** The provider this agent will run on, resolving "Default". */
+  protected readonly provider = computed(
+    () => this.form().provider || this.store.health()?.default_provider,
+  );
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 

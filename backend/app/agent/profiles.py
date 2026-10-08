@@ -1,7 +1,8 @@
 """Agent profiles: a name, extra instructions, and the subset of tools a chat may use.
 
 Each user gets copies of these presets the first time they list agents; from then on the
-copies are ordinary rows they can edit or delete (see Store.seed_agents).
+copies are ordinary rows they can edit or delete (see Store.seed_agents). An agent's
+`provider` is '' (the app's default_provider), "anthropic" or "openai"; presets use the default.
 """
 
 from typing import Any

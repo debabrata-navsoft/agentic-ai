@@ -89,7 +89,8 @@
                 }
               </div>
               <span class="agent-engine">
-                {{ agent.tools.length }} {{ agent.tools.length === 1 ? 'tool' : 'tools' }}
+                {{ agent.tools.length }} {{ agent.tools.length === 1 ? 'tool' : 'tools' }} ·
+                {{ providerName(agent) }}
               </span>
             </div>
           </div>

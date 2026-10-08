@@ -71,6 +71,10 @@ def close_dangling_tool_calls(messages: list[dict[str, Any]]) -> None:
 
 
 class Agent:
+    # Hooks the chat route calls for whichever provider a session uses (see openai_loop.py).
+    close_dangling = staticmethod(close_dangling_tool_calls)
+    user_content = staticmethod(lambda content: content)  # already in Anthropic's format
+
     def __init__(self, client: AsyncAnthropic, settings: Settings, registry: ToolRegistry):
         self.client = client
         self.settings = settings

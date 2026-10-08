@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
 
     model: str = "claude-opus-5"
+    # OpenAI, optional: agents (or the whole app, via default_provider) can run on it instead.
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
+    openai_model: str = "gpt-5"
+    # The provider for plain chats and for agents set to "Default".
+    default_provider: Literal["anthropic", "openai"] = "anthropic"
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "high"
     max_tokens: int = 64000
     max_iterations: int = 25

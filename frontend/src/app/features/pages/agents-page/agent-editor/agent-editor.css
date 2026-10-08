@@ -66,6 +66,7 @@ label,
 }
 
 input:not([type='checkbox']),
+select,
 textarea {
   padding: 9px 11px;
   border-radius: 9px;

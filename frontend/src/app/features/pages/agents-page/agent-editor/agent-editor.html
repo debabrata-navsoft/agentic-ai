@@ -29,6 +29,29 @@
         </label>
       </div>
 
+      <label>
+        <span>Provider</span>
+        <select (change)="set('provider', $any($event.target).value)">
+          @if (store.health(); as h) {
+            <option value="" [selected]="!form().provider">
+              Default ({{ providerNames[h.default_provider] }})
+            </option>
+            @for (p of providers; track p) {
+              <option
+                [value]="p"
+                [selected]="form().provider === p"
+                [disabled]="!h.providers.includes(p)"
+              >
+                {{ providerNames[p] }}{{ h.providers.includes(p) ? '' : ' (no API key set)' }}
+              </option>
+            }
+          }
+        </select>
+        @if (provider() === 'openai') {
+          <small>Web search and Fetch page only work with Claude; OpenAI agents skip them.</small>
+        }
+      </label>
+
       <div class="field">
         <span>Icon</span>
         <div class="icons">

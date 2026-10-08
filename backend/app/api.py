@@ -1,19 +1,23 @@
 import asyncio
 import json
 import logging
+from typing import Literal
 
 import anthropic
+import openai
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
-from app.agent.loop import close_dangling_tool_calls
 from app.agent.profiles import PRESETS
 from app.attachments import MAX_ATTACHMENTS, Attachment, AttachmentError, user_content
 from app.auth import CurrentUser
 from app.rag import SUPPORTED_EXTENSIONS, UnsupportedFileError
 from app.tools import ToolContext
-from app.transcript import to_transcript
+from app.transcript import openai_transcript, to_transcript
+
+# How to display a stored session, by the provider its history was written for.
+TRANSCRIPTS = {"anthropic": to_transcript, "openai": openai_transcript}
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -44,6 +48,7 @@ class AgentIn(BaseModel):
     description: str = Field(default="", max_length=500)
     instructions: str = Field(default="", max_length=8000)
     tools: list[str] = Field(default_factory=list, max_length=50)
+    provider: Literal["", "anthropic", "openai"] = ""  # '' = the app's default provider
 
 
 class RenameRequest(BaseModel):
@@ -62,6 +67,14 @@ def _error_message(exc: Exception) -> str:
         return f"Claude API error ({exc.status_code}): {exc.message}"
     if isinstance(exc, anthropic.APIConnectionError):
         return "Could not reach the Claude API. Check the backend's network connection."
+    if isinstance(exc, openai.AuthenticationError):
+        return "OpenAI authentication failed - check OPENAI_API_KEY in backend/.env."
+    if isinstance(exc, openai.RateLimitError):
+        return "Rate limited by the OpenAI API (or out of credits). Wait a moment and try again."
+    if isinstance(exc, openai.APIStatusError):
+        return f"OpenAI API error ({exc.status_code}): {exc.message}"
+    if isinstance(exc, openai.APIConnectionError):
+        return "Could not reach the OpenAI API. Check the backend's network connection."
     return f"Unexpected error: {type(exc).__name__}: {exc}"
 
 
@@ -80,7 +93,10 @@ def _sse(event: str, data: dict) -> dict:
 @router.get("/health")
 async def health(request: Request):
     s = request.app.state.settings
-    return {"status": "ok", "model": s.model, "effort": s.effort, "web_tools": s.enable_web_tools}
+    return {
+        "status": "ok", "model": s.model, "effort": s.effort, "web_tools": s.enable_web_tools,
+        "providers": sorted(request.app.state.runners), "default_provider": s.default_provider,
+    }
 
 
 @router.get("/tools")
@@ -144,7 +160,7 @@ async def create_session(request: Request, user: CurrentUser):
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str, request: Request, user: CurrentUser):
     session = _session_or_404(request, user, session_id)
-    session["messages"] = to_transcript(session["messages"])
+    session["messages"] = TRANSCRIPTS[session["provider"]](session["messages"])
     return session
 
 
@@ -203,7 +219,6 @@ async def delete_document(doc_id: str, request: Request, user: CurrentUser):
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request, user: CurrentUser):
     store = request.app.state.store
-    agent = request.app.state.agent
     settings = request.app.state.settings
 
     # Validate attachments before creating a session for them.
@@ -214,10 +229,18 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
 
     if body.session_id:
         session = _session_or_404(request, user, body.session_id)
+        provider = session["provider"]
     else:
-        if body.agent_id and store.get_agent(user["id"], body.agent_id) is None:
+        agent_profile = store.get_agent(user["id"], body.agent_id) if body.agent_id else None
+        if body.agent_id and agent_profile is None:
             raise HTTPException(404, "Agent not found")
-        session = {**store.create_session(user["id"], agent_id=body.agent_id), "messages": []}
+        # A chat keeps the provider it starts with: its history is stored in that provider's format.
+        provider = (agent_profile and agent_profile["provider"]) or settings.default_provider
+    runner = request.app.state.runners.get(provider)
+    if runner is None:
+        raise HTTPException(400, "OpenAI isn't set up. Add OPENAI_API_KEY to backend/.env and restart the backend.")
+    if not body.session_id:
+        session = {**store.create_session(user["id"], agent_id=body.agent_id, provider=provider), "messages": []}
 
     session_id = session["id"]
     if session_id in _active_sessions:
@@ -228,7 +251,7 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
         title = (body.message.strip() or body.attachments[0].name).splitlines()[0][:60]
         store.rename_session(user["id"], session_id, title)
         session["title"] = title
-    messages.append({"role": "user", "content": content})
+    messages.append({"role": "user", "content": runner.user_content(content)})
     start_len = len(messages)
 
     workspace = settings.user_workspace(user["id"])
@@ -241,7 +264,7 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
         _active_sessions.add(session_id)
         try:
             yield _sse("session", {"id": session_id, "title": session["title"], "agent_id": session.get("agent_id")})
-            async for ev in agent.run(messages, ctx, profile):
+            async for ev in runner.run(messages, ctx, profile):
                 yield _sse(ev["event"], ev["data"])
         except Exception as exc:
             log.exception("agent run failed")
@@ -249,7 +272,7 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
                 messages.pop()  # nothing happened; don't keep the unanswered message
             yield _sse("error", {"message": _error_message(exc)})
         finally:
-            close_dangling_tool_calls(messages)
+            runner.close_dangling(messages)
             if messages:
                 store.save_messages(session_id, messages)
             else:

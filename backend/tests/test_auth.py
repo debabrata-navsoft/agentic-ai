@@ -22,6 +22,7 @@ def app(tmp_path, store):
     app.state.settings = Settings(data_dir=tmp_path, workspace_dir=tmp_path / "workspace")
     app.state.store = store
     app.state.kb = app.state.agent = None  # these tests never reach embedding or the model
+    app.state.runners = {}
     (tmp_path / "workspace").mkdir()
     return app
 
