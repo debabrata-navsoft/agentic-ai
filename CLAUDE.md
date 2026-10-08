@@ -147,6 +147,17 @@ The loop handles these stop reasons:
   through local execution. `AGENT_ENABLE_WEB_TOOLS` gates them.
 - File tools resolve every path inside `AGENT_WORKSPACE_DIR` and reject escapes (`files.py::_resolve`).
 
+### Agent profiles
+
+- An agent is a per-user `agents` row: name, role, icon, description, `instructions`, and a `tools`
+  list of tool names. `GET /api/agents` seeds a user's editable copies of `PRESETS`
+  (`app/agent/profiles.py`) the first time; a user must keep at least one agent.
+- A session stores `agent_id` when it is created (`ChatRequest.agent_id` is ignored for existing
+  sessions). NULL, or an agent that was deleted, means plain Synora with every tool.
+- `Agent.run(messages, ctx, profile)` appends the profile's role and instructions to `SYSTEM_PROMPT`
+  (`system_prompt()`), sends only the profile's tools (filtered, so order stays sorted), and rejects
+  calls to any other tool. The profile is re-read every turn, so edits apply to existing chats.
+
 ### Persistence and RAG
 
 - `app/store.py` is one SQLite connection (`check_same_thread=False`, guarded by a lock) with tables

@@ -4,11 +4,13 @@ import { firstValueFrom } from 'rxjs';
 
 import {
   AgentEvent,
+  AgentInput,
+  AgentProfile,
+  ChatRequest,
   DocumentList,
   Health,
   KnowledgeDocument,
   Note,
-  OutgoingAttachment,
   SessionDetail,
   SessionSummary,
   ToolInfo,
@@ -60,6 +62,11 @@ export class AgentApi {
   deleteSession = (id: string) => this.del(`/sessions/${id}`);
   notes = () => this.get<Note[]>('/notes');
   deleteNote = (id: number) => this.del(`/notes/${id}`);
+  agents = () => this.get<AgentProfile[]>('/agents');
+  createAgent = (agent: AgentInput) => this.post<AgentProfile>('/agents', agent);
+  updateAgent = (id: string, agent: AgentInput) =>
+    firstValueFrom(this.http.put<AgentProfile>(`${API}/agents/${id}`, agent));
+  deleteAgent = (id: string) => this.del(`/agents/${id}`);
   documents = () => this.get<DocumentList>('/documents');
   deleteDocument = (id: string) => this.del(`/documents/${id}`);
 
@@ -70,23 +77,21 @@ export class AgentApi {
   }
 
   async chat(
-    message: string,
-    attachments: OutgoingAttachment[],
-    sessionId: string | null,
+    body: ChatRequest,
     onEvent: (ev: AgentEvent) => void,
     signal: AbortSignal,
   ): Promise<void> {
     const res = await fetch(`${API}/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-      body: JSON.stringify({ message, attachments, session_id: sessionId }),
+      body: JSON.stringify(body),
       signal,
     });
     if (!res.ok || !res.body) {
       const detail = (await res.json().catch(() => null))?.detail;
       // FastAPI's own validation errors are a list; ours are a string.
-      const message = typeof detail === 'string' ? detail : (detail?.[0]?.msg ?? null);
-      throw new ApiError(message ?? `Request failed (${res.status})`, res.status);
+      const msg = typeof detail === 'string' ? detail : (detail?.[0]?.msg ?? null);
+      throw new ApiError(msg ?? `Request failed (${res.status})`, res.status);
     }
 
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();

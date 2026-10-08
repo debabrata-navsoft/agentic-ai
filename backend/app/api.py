@@ -4,10 +4,11 @@ import logging
 
 import anthropic
 from fastapi import APIRouter, HTTPException, Request, UploadFile
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sse_starlette.sse import EventSourceResponse
 
 from app.agent.loop import close_dangling_tool_calls
+from app.agent.profiles import PRESETS
 from app.attachments import MAX_ATTACHMENTS, Attachment, AttachmentError, user_content
 from app.auth import CurrentUser
 from app.rag import SUPPORTED_EXTENSIONS, UnsupportedFileError
@@ -25,12 +26,24 @@ class ChatRequest(BaseModel):
     message: str = Field(default="", max_length=100_000)
     attachments: list[Attachment] = Field(default_factory=list, max_length=MAX_ATTACHMENTS)
     session_id: str | None = None
+    agent_id: str | None = None  # only used when starting a new session
 
     @model_validator(mode="after")
     def _not_empty(self):
         if not self.message.strip() and not self.attachments:
             raise ValueError("Send a message or attach a file")
         return self
+
+
+class AgentIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=60)
+    role: str = Field(default="", max_length=80)
+    icon: str = Field(default="bot", max_length=40)
+    description: str = Field(default="", max_length=500)
+    instructions: str = Field(default="", max_length=8000)
+    tools: list[str] = Field(default_factory=list, max_length=50)
 
 
 class RenameRequest(BaseModel):
@@ -73,6 +86,49 @@ async def health(request: Request):
 @router.get("/tools")
 async def list_tools(request: Request, _: CurrentUser):
     return request.app.state.agent.catalog
+
+
+def _agent_fields(request: Request, body: AgentIn) -> dict:
+    known = {t["name"] for t in request.app.state.agent.catalog}
+    if unknown := sorted(set(body.tools) - known):
+        raise HTTPException(422, f"Unknown tools: {', '.join(unknown)}")
+    return {**body.model_dump(), "tools": sorted(set(body.tools))}
+
+
+def _user_agents(store, user_id: str) -> list[dict]:
+    # A user's first look at agents gives them editable copies of the built-in ones.
+    return store.list_agents(user_id) or store.seed_agents(user_id, PRESETS)
+
+
+@router.get("/agents")
+async def list_agents(request: Request, user: CurrentUser):
+    return _user_agents(request.app.state.store, user["id"])
+
+
+@router.post("/agents", status_code=201)
+async def create_agent(body: AgentIn, request: Request, user: CurrentUser):
+    store = request.app.state.store
+    _user_agents(store, user["id"])
+    return store.create_agent(user["id"], _agent_fields(request, body))
+
+
+@router.put("/agents/{agent_id}")
+async def update_agent(agent_id: str, body: AgentIn, request: Request, user: CurrentUser):
+    agent = request.app.state.store.update_agent(user["id"], agent_id, _agent_fields(request, body))
+    if agent is None:
+        raise HTTPException(404, "Agent not found")
+    return agent
+
+
+@router.delete("/agents/{agent_id}", status_code=204)
+async def delete_agent(agent_id: str, request: Request, user: CurrentUser):
+    store = request.app.state.store
+    agents = store.list_agents(user["id"])
+    if all(a["id"] != agent_id for a in agents):
+        raise HTTPException(404, "Agent not found")
+    if len(agents) == 1:
+        raise HTTPException(409, "Keep at least one agent.")
+    store.delete_agent(user["id"], agent_id)
 
 
 @router.get("/sessions")
@@ -159,7 +215,9 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
     if body.session_id:
         session = _session_or_404(request, user, body.session_id)
     else:
-        session = {**store.create_session(user["id"]), "messages": []}
+        if body.agent_id and store.get_agent(user["id"], body.agent_id) is None:
+            raise HTTPException(404, "Agent not found")
+        session = {**store.create_session(user["id"], agent_id=body.agent_id), "messages": []}
 
     session_id = session["id"]
     if session_id in _active_sessions:
@@ -176,12 +234,14 @@ async def chat(body: ChatRequest, request: Request, user: CurrentUser):
     workspace = settings.user_workspace(user["id"])
     workspace.mkdir(parents=True, exist_ok=True)
     ctx = ToolContext(store=store, workspace=workspace, user_id=user["id"], kb=request.app.state.kb)
+    # The agent's current settings apply on every turn, so edits take effect in existing chats.
+    profile = store.get_agent(user["id"], session["agent_id"]) if session.get("agent_id") else None
 
     async def events():
         _active_sessions.add(session_id)
         try:
-            yield _sse("session", {"id": session_id, "title": session["title"]})
-            async for ev in agent.run(messages, ctx):
+            yield _sse("session", {"id": session_id, "title": session["title"], "agent_id": session.get("agent_id")})
+            async for ev in agent.run(messages, ctx, profile):
                 yield _sse(ev["event"], ev["data"])
         except Exception as exc:
             log.exception("agent run failed")

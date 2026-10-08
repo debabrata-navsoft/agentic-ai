@@ -4,6 +4,8 @@ import { AgentApi, ApiError } from './agent-api';
 import { AuthStore } from './auth-store';
 import {
   AgentEvent,
+  AgentInput,
+  AgentProfile,
   AssistantMessage,
   ChatMessage,
   Health,
@@ -37,6 +39,12 @@ export class ChatStore {
   /** Round-trip time of the startup health check. */
   readonly latencyMs = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+  readonly agents = signal<AgentProfile[]>([]);
+  /** The agent for the open chat, or for the next new chat; null is plain Synora. */
+  readonly agentId = signal<string | null>(null);
+  readonly currentAgent = computed(
+    () => this.agents().find((a) => a.id === this.agentId()) ?? null,
+  );
   readonly documents = signal<KnowledgeDocument[]>([]);
   readonly supportedTypes = signal<string[]>([]);
   readonly uploading = signal<string | null>(null);
@@ -59,7 +67,12 @@ export class ChatStore {
       const [health, tools] = await Promise.all([timedHealth, this.api.tools()]);
       this.health.set(health);
       this.tools.set(tools);
-      await Promise.all([this.refreshSessions(), this.refreshNotes(), this.refreshDocuments()]);
+      await Promise.all([
+        this.refreshSessions(),
+        this.refreshNotes(),
+        this.refreshDocuments(),
+        this.refreshAgents(),
+      ]);
     } catch {
       if (this.auth.user()) {
         this.error.set('Cannot reach the backend. Start it with: uvicorn app.main:app --port 8000');
@@ -77,6 +90,8 @@ export class ChatStore {
     this.tools.set([]);
     this.latencyMs.set(null);
     this.documents.set([]);
+    this.agents.set([]);
+    this.agentId.set(null);
     this.error.set(null);
     this.uploadError.set(null);
   }
@@ -87,6 +102,23 @@ export class ChatStore {
 
   async refreshNotes() {
     this.notes.set(await this.api.notes());
+  }
+
+  async refreshAgents() {
+    this.agents.set(await this.api.agents());
+  }
+
+  /** Create (no id) or update an agent. */
+  async saveAgent(agent: AgentInput, id?: string) {
+    const saved = id ? await this.api.updateAgent(id, agent) : await this.api.createAgent(agent);
+    this.agents.update((l) => (id ? l.map((a) => (a.id === id ? saved : a)) : [...l, saved]));
+    return saved;
+  }
+
+  async deleteAgent(id: string) {
+    await this.api.deleteAgent(id);
+    this.agents.update((l) => l.filter((a) => a.id !== id));
+    if (this.agentId() === id && !this.currentId()) this.agentId.set(null);
   }
 
   async refreshDocuments() {
@@ -119,10 +151,12 @@ export class ChatStore {
     this.activeView.set(view);
   }
 
-  newChat() {
+  /** Start a new chat, optionally running as one of the user's agents. */
+  newChat(agentId: string | null = null) {
     this.activeView.set('chat');
     if (this.running()) return;
     this.currentId.set(null);
+    this.agentId.set(agentId);
     this.messages.set([]);
   }
 
@@ -131,6 +165,7 @@ export class ChatStore {
     if (this.running() || id === this.currentId()) return;
     const session = await this.api.session(id);
     this.currentId.set(id);
+    this.agentId.set(session.agent_id);
     this.messages.set(session.messages);
   }
 
@@ -179,7 +214,13 @@ export class ChatStore {
     };
 
     try {
-      await this.api.chat(text, attachments, this.currentId(), onEvent, this.abort.signal);
+      const body = {
+        message: text,
+        attachments,
+        session_id: this.currentId(),
+        agent_id: this.agentId(),
+      };
+      await this.api.chat(body, onEvent, this.abort.signal);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) return this.auth.expire();
       const aborted = e instanceof DOMException && e.name === 'AbortError';

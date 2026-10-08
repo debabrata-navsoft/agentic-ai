@@ -10,6 +10,7 @@ from typing import Any, AsyncIterator
 
 from anthropic import AsyncAnthropic
 
+from app.agent.profiles import system_prompt
 from app.agent.prompts import SYSTEM_PROMPT
 from app.config import Settings
 from app.tools import SERVER_TOOL_CATALOG, SERVER_TOOLS, ToolContext, ToolRegistry
@@ -78,12 +79,13 @@ class Agent:
         self.tools = registry.definitions() + (SERVER_TOOLS if web else [])
         self.catalog = registry.catalog() + (SERVER_TOOL_CATALOG if web else [])
 
-    def _request(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+    def _request(
+        self, messages: list[dict[str, Any]], system: str, tools: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         kwargs: dict[str, Any] = {
             "model": self.settings.model,
             "max_tokens": self.settings.max_tokens,
-            "system": SYSTEM_PROMPT,
-            "tools": self.tools,
+            "system": system,
             "messages": messages,
             "thinking": {"type": "adaptive", "display": "summarized"},
             "output_config": {"effort": self.settings.effort},
@@ -92,13 +94,22 @@ class Agent:
         if self.settings.enable_fallbacks:
             kwargs["betas"] = ["server-side-fallback-2026-07-01"]
             kwargs["fallbacks"] = "default"
+        if tools:
+            kwargs["tools"] = tools
         return kwargs
 
-    async def run(self, messages: list[dict[str, Any]], ctx: ToolContext) -> AsyncIterator[Event]:
+    async def run(
+        self, messages: list[dict[str, Any]], ctx: ToolContext, profile: dict[str, Any] | None = None
+    ) -> AsyncIterator[Event]:
         """Run until the model stops calling tools. Appends every turn to `messages` in place.
 
-        `ctx` scopes client tools to the user who owns the conversation.
+        `ctx` scopes client tools to the user who owns the conversation. `profile` (an agent
+        from the store) adds its instructions and limits the run to its tools.
         """
+        system = system_prompt(SYSTEM_PROMPT, profile)
+        # Filtering keeps the registry's sorted order, so each agent's prefix caches stably.
+        tools = [t for t in self.tools if t["name"] in profile["tools"]] if profile else self.tools
+        allowed = {t["name"] for t in tools}
         usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0}
         json_retries = 0
         step = 0
@@ -107,7 +118,7 @@ class Agent:
         while step < self.settings.max_iterations:
             yield _event("step_start", step=step)
             try:
-                async with self.client.beta.messages.stream(**self._request(messages)) as stream:
+                async with self.client.beta.messages.stream(**self._request(messages, system, tools)) as stream:
                     async for ev in stream:
                         out = self._translate(ev)
                         if out:
@@ -157,7 +168,7 @@ class Agent:
                 # Tool input was cut off; a truncated input still parses, so don't run it.
                 results = [("Tool input was truncated by max_tokens; retry with less input.", True)] * len(tool_uses)
             else:
-                results = await asyncio.gather(*(self._run_tool(b, ctx) for b in tool_uses))
+                results = await asyncio.gather(*(self._run_tool(b, ctx, allowed) for b in tool_uses))
 
             tool_results = []
             for block, (output, is_error) in zip(tool_uses, results):
@@ -171,9 +182,9 @@ class Agent:
 
         yield _event("done", stop_reason=stop_reason, usage=usage, steps=step + 1)
 
-    async def _run_tool(self, block: Any, ctx: ToolContext) -> tuple[str, bool]:
+    async def _run_tool(self, block: Any, ctx: ToolContext, allowed: set[str]) -> tuple[str, bool]:
         tool = self.registry.get(block.name)
-        if tool is None:
+        if tool is None or block.name not in allowed:
             return f"Unknown tool: {block.name}", True
         log.info("tool %s %s", block.name, block.input)
         return await tool.run(block.input, ctx)

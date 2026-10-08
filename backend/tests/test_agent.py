@@ -108,3 +108,21 @@ def test_close_dangling_tool_calls():
     close_dangling_tool_calls(messages)
     assert messages[-1]["content"][0]["tool_use_id"] == "t1"
     assert messages[-1]["content"][0]["is_error"] is True
+
+
+def test_agent_profile_limits_tools_and_adds_instructions(agent_and_requests):
+    agent, ctx, requests = agent_and_requests
+    profile = {"name": "Researcher", "role": "Web", "instructions": "Cite sources.", "tools": ["get_current_time"]}
+    messages = [{"role": "user", "content": "What is 6*7?"}]
+
+    async def collect():
+        return [e async for e in agent.run(messages, ctx, profile)]
+
+    events = asyncio.run(collect())
+
+    req = requests[0]
+    assert [t["name"] for t in req["tools"]] == ["get_current_time"]
+    assert "you are Researcher, Web" in req["system"] and req["system"].endswith("Cite sources.")
+    # The (mocked) model still called the calculator; it isn't this agent's tool, so it fails.
+    result = next(e for e in events if e["event"] == "tool_result")
+    assert result["data"]["is_error"] and "Unknown tool" in result["data"]["output"]

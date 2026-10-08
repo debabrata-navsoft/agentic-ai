@@ -4,6 +4,11 @@
     <span>Synora Workspace</span>
     <svg lucideIcon="chevron-right" size="14"></svg>
     <span class="current truncate">{{ store.currentTitle() }}</span>
+    @if (store.currentAgent(); as agent) {
+      <span class="chip agent-chip" [title]="agent.description">
+        <svg [lucideIcon]="agent.icon" size="12"></svg>{{ agent.name }}
+      </span>
+    }
   </div>
   <div class="top-right">
     @if (store.running()) {

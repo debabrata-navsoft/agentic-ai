@@ -19,6 +19,7 @@ import {
   LucideLogOut,
   LucideMessageSquareText,
   LucideMoon,
+  LucidePencil,
   LucidePlus,
   LucideSearch,
   LucideSettings,
@@ -60,6 +61,7 @@ export const APP_ICONS = [
   LucideLogOut,
   LucideMessageSquareText,
   LucideMoon,
+  LucidePencil,
   LucidePlus,
   LucideSearch,
   LucideSettings,
@@ -75,4 +77,3 @@ export const APP_ICONS = [
   LucideX,
   LucideZap,
 ];
-

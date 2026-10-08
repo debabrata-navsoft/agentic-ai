@@ -41,6 +41,18 @@ CREATE TABLE IF NOT EXISTS notes (
     tags        TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS agents (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    role         TEXT NOT NULL DEFAULT '',
+    icon         TEXT NOT NULL DEFAULT 'bot',
+    description  TEXT NOT NULL DEFAULT '',
+    instructions TEXT NOT NULL DEFAULT '',
+    tools        TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS agents_user ON agents (user_id);
 CREATE TABLE IF NOT EXISTS documents (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
@@ -71,6 +83,18 @@ def _user(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return None if row is None else {**dict(row), "disabled": bool(row["disabled"])}
 
 
+AGENT_FIELDS = ("name", "role", "icon", "description", "instructions", "tools")
+AGENT_COLUMNS = "id, " + ", ".join(AGENT_FIELDS) + ", created_at"
+
+
+def _agent(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    return None if row is None else {**dict(row), "tools": json.loads(row["tools"])}
+
+
+def _agent_values(fields: dict[str, Any]) -> list[Any]:
+    return [json.dumps(fields[f]) if f == "tools" else fields[f] for f in AGENT_FIELDS]
+
+
 class Store:
     def __init__(self, db_path: Path | str):
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
@@ -85,6 +109,9 @@ class Store:
             if "user_id" not in columns:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT")
             self._conn.execute(f"CREATE INDEX IF NOT EXISTS {table}_user ON {table} (user_id)")
+        # The agent a chat runs as; NULL (older chats, or a deleted agent) means plain Synora.
+        if "agent_id" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(sessions)")}:
+            self._conn.execute("ALTER TABLE sessions ADD COLUMN agent_id TEXT")
         self._conn.commit()
 
     def _execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
@@ -170,25 +197,25 @@ class Store:
 
     # ---- sessions -------------------------------------------------------
 
-    def create_session(self, user_id: str, title: str = "New chat") -> dict[str, Any]:
+    def create_session(self, user_id: str, title: str = "New chat", agent_id: str | None = None) -> dict[str, Any]:
         session_id = uuid.uuid4().hex
         now = _now()
         self._execute(
-            "INSERT INTO sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (session_id, user_id, title, now, now),
+            "INSERT INTO sessions (id, user_id, title, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, user_id, title, agent_id, now, now),
         )
-        return {"id": session_id, "title": title, "created_at": now, "updated_at": now}
+        return {"id": session_id, "title": title, "agent_id": agent_id, "created_at": now, "updated_at": now}
 
     def list_sessions(self, user_id: str) -> list[dict[str, Any]]:
         rows = self._execute(
-            "SELECT id, title, created_at, updated_at FROM sessions WHERE user_id = ? ORDER BY updated_at DESC",
+            "SELECT id, title, agent_id, created_at, updated_at FROM sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 
     def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
         row = self._execute(
-            "SELECT id, title, created_at, updated_at, messages FROM sessions WHERE id = ? AND user_id = ?",
+            "SELECT id, title, agent_id, created_at, updated_at, messages FROM sessions WHERE id = ? AND user_id = ?",
             (session_id, user_id),
         ).fetchone()
         if row is None:
@@ -210,6 +237,44 @@ class Store:
 
     def delete_session(self, user_id: str, session_id: str) -> bool:
         return self._execute("DELETE FROM sessions WHERE id = ? AND user_id = ?", (session_id, user_id)).rowcount > 0
+
+    # ---- agents (per-user profiles: instructions + allowed tools) ---------
+
+    def list_agents(self, user_id: str) -> list[dict[str, Any]]:
+        rows = self._execute(
+            f"SELECT {AGENT_COLUMNS} FROM agents WHERE user_id = ? ORDER BY created_at, rowid", (user_id,)
+        ).fetchall()
+        return [_agent(r) for r in rows]
+
+    def get_agent(self, user_id: str, agent_id: str) -> dict[str, Any] | None:
+        row = self._execute(
+            f"SELECT {AGENT_COLUMNS} FROM agents WHERE id = ? AND user_id = ?", (agent_id, user_id)
+        ).fetchone()
+        return _agent(row)
+
+    def create_agent(self, user_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        agent_id = uuid.uuid4().hex
+        self._execute(
+            f"INSERT INTO agents ({AGENT_COLUMNS}, user_id) VALUES (?, {', '.join('?' * len(AGENT_FIELDS))}, ?, ?)",
+            (agent_id, *_agent_values(fields), _now(), user_id),
+        )
+        return self.get_agent(user_id, agent_id)
+
+    def seed_agents(self, user_id: str, presets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Give a user their own editable copies of the built-in agents."""
+        for preset in presets:
+            self.create_agent(user_id, preset)
+        return self.list_agents(user_id)
+
+    def update_agent(self, user_id: str, agent_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        self._execute(
+            f"UPDATE agents SET {', '.join(f'{f} = ?' for f in AGENT_FIELDS)} WHERE id = ? AND user_id = ?",
+            (*_agent_values(fields), agent_id, user_id),
+        )
+        return self.get_agent(user_id, agent_id)
+
+    def delete_agent(self, user_id: str, agent_id: str) -> bool:
+        return self._execute("DELETE FROM agents WHERE id = ? AND user_id = ?", (agent_id, user_id)).rowcount > 0
 
     # ---- notes (long-term memory shared across a user's sessions) -------
 

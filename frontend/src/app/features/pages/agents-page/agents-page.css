@@ -274,24 +274,44 @@
   font-weight: 600;
 }
 
-.capabilities-list {
+.agent-instructions {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.page-error {
+  margin: 0;
+  color: var(--err);
+  font-size: 13px;
+}
+.card-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.cap-pill {
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
-  font-size: 11.5px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
 }
-.cap-pill svg {
-  color: var(--ok);
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.icon-btn:hover {
+  color: var(--text);
+}
+.icon-btn.danger:hover {
+  color: var(--err);
 }
 
 .tools-list {
@@ -314,14 +334,6 @@
   padding-top: 14px;
   border-top: 1px solid var(--border);
   gap: 10px;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font: 11px var(--mono);
-  color: var(--muted);
 }
 
 .launch-agent-btn {

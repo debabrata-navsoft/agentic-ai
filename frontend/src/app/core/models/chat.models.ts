@@ -1,6 +1,8 @@
 export interface SessionSummary {
   id: string;
   title: string;
+  /** The agent the chat runs as; null for plain Synora (older chats or a deleted agent). */
+  agent_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +70,31 @@ export type ChatMessage = UserMessage | AssistantMessage;
 
 export interface SessionDetail extends SessionSummary {
   messages: ChatMessage[];
+}
+
+/** The editable part of an agent profile. */
+export interface AgentInput {
+  name: string;
+  role: string;
+  icon: string;
+  description: string;
+  instructions: string;
+  /** Tool names from /api/tools. */
+  tools: string[];
+}
+
+export interface AgentProfile extends AgentInput {
+  id: string;
+  created_at: string;
+}
+
+/** Body of POST /api/chat. */
+export interface ChatRequest {
+  message: string;
+  attachments: OutgoingAttachment[];
+  session_id: string | null;
+  /** Only used when starting a new session. */
+  agent_id: string | null;
 }
 
 export interface Note {

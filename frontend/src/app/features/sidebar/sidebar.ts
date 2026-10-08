@@ -50,7 +50,12 @@ export class Sidebar {
   protected readonly upgradeOpen = signal(false);
   protected readonly tabs = computed<TabDef[]>(() => [
     { id: 'chat', label: 'Chats', icon: 'message-square-text' },
-    { id: 'agents', label: 'AI Agents', icon: 'bot', count: () => 5 },
+    {
+      id: 'agents',
+      label: 'AI Agents',
+      icon: 'bot',
+      count: () => this.store.agents().length,
+    },
     {
       id: 'docs',
       label: 'Docs',

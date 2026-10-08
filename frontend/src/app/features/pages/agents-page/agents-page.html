@@ -6,15 +6,21 @@
         <svg lucideIcon="bot" size="20"></svg>
       </div>
       <div>
-        <h2 class="page-title">AI Agents & Autonomous Assistants</h2>
-        <p class="page-sub">Specialized autonomous agents configured with customized tool permissions and system prompts.</p>
+        <h2 class="page-title">AI Agents</h2>
+        <p class="page-sub">
+          Each agent has its own instructions and tools. Chat with one, or create your own.
+        </p>
       </div>
     </div>
 
     <div class="topbar-right">
-      <button type="button" class="btn back-btn" (click)="backToChat()">
+      <button type="button" class="btn back-btn" (click)="store.setActiveView('chat')">
         <svg lucideIcon="message-square-text" size="15"></svg>
         <span>Back to Chat</span>
+      </button>
+      <button type="button" class="btn primary" (click)="editing.set('new')">
+        <svg lucideIcon="plus" size="15"></svg>
+        <span>New agent</span>
       </button>
     </div>
   </header>
@@ -24,12 +30,12 @@
     <!-- Header Summary Stats -->
     <div class="stats-row">
       <div class="stat-card">
-        <span class="stat-num">{{ agents.length }}</span>
-        <span class="stat-lbl">Active Agents</span>
+        <span class="stat-num">{{ store.agents().length }}</span>
+        <span class="stat-lbl">Your Agents</span>
       </div>
       <div class="stat-card">
-        <span class="stat-num">Claude 3.5</span>
-        <span class="stat-lbl">Underlying LLM Engine</span>
+        <span class="stat-num">{{ store.health()?.model ?? '—' }}</span>
+        <span class="stat-lbl">Underlying Model</span>
       </div>
       <div class="stat-card">
         <span class="stat-num">Multi-Tool</span>
@@ -47,7 +53,7 @@
         <svg lucideIcon="search" size="16"></svg>
         <input
           type="text"
-          placeholder="Filter agents by name, role, or capabilities…"
+          placeholder="Filter agents by name, role, or tools…"
           [value]="searchQuery()"
           (input)="searchQuery.set($any($event.target).value)"
         />
@@ -57,8 +63,14 @@
           </button>
         }
       </div>
-      <span class="count-tag">{{ filteredAgents().length }} of {{ agents.length }} Agents</span>
+      <span class="count-tag">
+        {{ filteredAgents().length }} of {{ store.agents().length }} Agents
+      </span>
     </div>
+
+    @if (error(); as err) {
+      <p class="page-error">{{ err }}</p>
+    }
 
     <!-- Agents Grid -->
     <div class="agents-grid">
@@ -66,54 +78,64 @@
         <div class="agent-card">
           <!-- Card Header -->
           <div class="agent-card-head">
-            <div class="agent-avatar" [style.background]="agent.avatarGradient">
+            <div class="agent-avatar" [style.background]="gradient(agent)">
               <svg [lucideIcon]="agent.icon" size="22"></svg>
             </div>
             <div class="agent-identity">
               <div class="agent-name-row">
                 <strong class="agent-name">{{ agent.name }}</strong>
-                <span class="badge role-badge">{{ agent.role }}</span>
+                @if (agent.role) {
+                  <span class="badge role-badge">{{ agent.role }}</span>
+                }
               </div>
-              <span class="agent-engine">{{ agent.model }}</span>
+              <span class="agent-engine">{{ store.health()?.model }}</span>
             </div>
           </div>
 
           <!-- Description -->
           <p class="agent-desc">{{ agent.description }}</p>
 
-          <!-- Capabilities -->
-          <div class="agent-section">
-            <span class="section-label">Core Capabilities:</span>
-            <div class="capabilities-list">
-              @for (cap of agent.capabilities; track cap) {
-                <span class="cap-pill">
-                  <svg lucideIcon="check" size="11"></svg>
-                  <span>{{ cap }}</span>
-                </span>
-              }
+          @if (agent.instructions) {
+            <div class="agent-section">
+              <span class="section-label">Instructions:</span>
+              <p class="agent-instructions">{{ agent.instructions }}</p>
             </div>
-          </div>
+          }
 
-          <!-- Allowed Tools -->
           <div class="agent-section">
             <span class="section-label">Equipped Tools:</span>
             <div class="tools-list">
               @for (tool of agent.tools; track tool) {
-                <span class="tool-tag">{{ tool }}</span>
+                <span class="tool-tag">{{ toolLabel(tool) }}</span>
+              } @empty {
+                <span class="agent-desc">No tools: conversation only.</span>
               }
             </div>
           </div>
 
           <!-- Card Footer & Launch Button -->
           <div class="agent-card-foot">
-            <span class="status-indicator">
-              <span class="dot"></span> Ready
-            </span>
-            <button
-              type="button"
-              class="btn launch-agent-btn"
-              (click)="startChatWith(agent)"
-            >
+            <div class="card-actions">
+              <button
+                type="button"
+                class="icon-btn"
+                (click)="editing.set(agent)"
+                [attr.aria-label]="'Edit ' + agent.name"
+                title="Edit"
+              >
+                <svg lucideIcon="pencil" size="14"></svg>
+              </button>
+              <button
+                type="button"
+                class="icon-btn danger"
+                (click)="remove(agent)"
+                [attr.aria-label]="'Delete ' + agent.name"
+                title="Delete"
+              >
+                <svg lucideIcon="trash" size="14"></svg>
+              </button>
+            </div>
+            <button type="button" class="btn launch-agent-btn" (click)="store.newChat(agent.id)">
               <span>Chat with {{ agent.name }}</span>
               <svg lucideIcon="chevron-right" size="14"></svg>
             </button>
@@ -122,10 +144,18 @@
       } @empty {
         <div class="empty-state">
           <svg lucideIcon="bot" size="38"></svg>
-          <h3>No agents match your search</h3>
-          <p>Try searching with another keyword or clear the search input.</p>
+          @if (store.agents().length) {
+            <h3>No agents match your search</h3>
+            <p>Try another keyword or clear the search.</p>
+          } @else {
+            <h3>Loading agents…</h3>
+          }
         </div>
       }
     </div>
   </main>
 </div>
+
+@if (editing(); as agent) {
+  <app-agent-editor [agent]="agent === 'new' ? null : agent" (closed)="editing.set(null)" />
+}

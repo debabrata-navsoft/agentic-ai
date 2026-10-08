@@ -1,0 +1,99 @@
+<div class="backdrop" (click)="closed.emit()">
+  <form class="modal" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); save()">
+    <header>
+      <h3>{{ agent() ? 'Edit agent' : 'New agent' }}</h3>
+      <button type="button" class="close" aria-label="Close" (click)="closed.emit()">
+        <svg lucideIcon="x" size="16"></svg>
+      </button>
+    </header>
+
+    <div class="body">
+      <div class="row">
+        <label>
+          <span>Name</span>
+          <input
+            maxlength="60"
+            [value]="form().name"
+            (input)="set('name', $any($event.target).value)"
+            placeholder="e.g. Travel Planner"
+          />
+        </label>
+        <label>
+          <span>Role</span>
+          <input
+            maxlength="80"
+            [value]="form().role"
+            (input)="set('role', $any($event.target).value)"
+            placeholder="e.g. Itinerary Specialist"
+          />
+        </label>
+      </div>
+
+      <div class="field">
+        <span>Icon</span>
+        <div class="icons">
+          @for (i of icons; track i) {
+            <button
+              type="button"
+              [class.active]="form().icon === i"
+              (click)="set('icon', i)"
+              [attr.aria-label]="i"
+            >
+              <svg [lucideIcon]="i" size="16"></svg>
+            </button>
+          }
+        </div>
+      </div>
+
+      <label>
+        <span>Description</span>
+        <input
+          maxlength="500"
+          [value]="form().description"
+          (input)="set('description', $any($event.target).value)"
+          placeholder="What this agent is for (shown on its card)"
+        />
+      </label>
+
+      <label>
+        <span>Instructions</span>
+        <textarea
+          rows="6"
+          maxlength="8000"
+          [value]="form().instructions"
+          (input)="set('instructions', $any($event.target).value)"
+          placeholder="How the agent should behave, e.g. 'Always answer in bullet points and cite sources.'"
+        ></textarea>
+      </label>
+
+      <div class="field">
+        <span>Tools ({{ form().tools.length }} of {{ store.tools().length }})</span>
+        <div class="tools">
+          @for (t of store.tools(); track t.name) {
+            <label class="tool">
+              <input
+                type="checkbox"
+                [checked]="form().tools.includes(t.name)"
+                (change)="toggleTool(t.name)"
+              />
+              <span>
+                <strong>{{ t.label }}</strong>
+                <small>{{ t.description }}</small>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      @if (error(); as err) {
+        <span class="error">{{ err }}</span>
+      }
+      <button type="button" class="btn" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : agent() ? 'Save changes' : 'Create agent' }}
+      </button>
+    </footer>
+  </form>
+</div>
