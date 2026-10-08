@@ -1,6 +1,7 @@
 """Accounts, login cookies, per-user data isolation, and admin authorization, via the real routes."""
 
 import sqlite3
+from datetime import timedelta
 
 import pytest
 from fastapi import FastAPI
@@ -184,3 +185,52 @@ def test_admin_login_only_admits_admins(app):
     assert ada.post("/api/auth/admin/login", json={**creds, "email": "ada@example.com"}).json()["role"] == "admin"
     assert ada.get("/api/auth/me").status_code == 200
     assert ada.post("/api/auth/admin/login", json={**creds, "password": "wrong", "email": "ada@example.com"}).status_code == 401
+
+
+def test_change_password(app):
+    signup(app, "ada@example.com")
+    bob = signup(app, "bob@example.com")
+    other_device = TestClient(app)
+    other_device.post("/api/auth/login", json={"email": "bob@example.com", "password": "correct horse"})
+
+    wrong = bob.post("/api/auth/password", json={"current_password": "nope", "new_password": "battery staple"})
+    assert wrong.status_code == 400
+    ok = bob.post("/api/auth/password", json={"current_password": "correct horse", "new_password": "battery staple"})
+    assert ok.status_code == 204
+    assert bob.get("/api/auth/me").status_code == 200  # this device stays signed in
+    assert other_device.get("/api/auth/me").status_code == 401  # others are signed out
+
+    login = TestClient(app).post
+    assert login("/api/auth/login", json={"email": "bob@example.com", "password": "correct horse"}).status_code == 401
+    assert login("/api/auth/login", json={"email": "bob@example.com", "password": "battery staple"}).status_code == 200
+
+
+def test_forgot_and_reset_password(app, monkeypatch):
+    sent: list[tuple[str, str]] = []
+    monkeypatch.setattr(auth, "send_reset_link", lambda settings, to, link: sent.append((to, link)))
+    signup(app, "ada@example.com")
+    bob = signup(app, "bob@example.com")
+    client = TestClient(app)
+
+    # Unknown emails get the same answer, but nothing is sent.
+    assert client.post("/api/auth/forgot", json={"email": "who@example.com"}).status_code == 202
+    assert sent == []
+    assert client.post("/api/auth/forgot", json={"email": "BOB@example.com"}).status_code == 202
+    [(to, link)] = sent
+    assert to == "bob@example.com" and "/reset-password?token=" in link
+    token = link.split("token=")[1]
+
+    short = client.post("/api/auth/reset", json={"token": token, "new_password": "short"})
+    assert short.status_code == 422
+    assert client.post("/api/auth/reset", json={"token": token, "new_password": "battery staple"}).status_code == 204
+    assert bob.get("/api/auth/me").status_code == 401  # signed out everywhere
+    assert client.post("/api/auth/reset", json={"token": token, "new_password": "another one"}).status_code == 400
+    ok = client.post("/api/auth/login", json={"email": "bob@example.com", "password": "battery staple"})
+    assert ok.status_code == 200
+
+
+def test_reset_token_expires(store):
+    user = store.create_user("ada@example.com", "Ada", "x")
+    token = store.create_reset_token(user["id"], timedelta(seconds=-1))
+    assert store.use_reset_token(token) is None
+    assert store.use_reset_token("not-a-token") is None

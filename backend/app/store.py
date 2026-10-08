@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
     created_at  TEXT NOT NULL,
     expires_at  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS password_resets (
+    token_hash  TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS sessions (
     id          TEXT PRIMARY KEY,
     title       TEXT NOT NULL,
@@ -192,8 +197,41 @@ class Store:
     def delete_token(self, token: str) -> None:
         self._execute("DELETE FROM auth_tokens WHERE token_hash = ?", (_hash_token(token),))
 
-    def delete_user_tokens(self, user_id: str) -> None:
-        self._execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
+    def delete_user_tokens(self, user_id: str, keep: str | None = None) -> None:
+        """Sign the user out everywhere, except the login `keep` (the current one) if given."""
+        keep_hash = _hash_token(keep) if keep else ""
+        self._execute("DELETE FROM auth_tokens WHERE user_id = ? AND token_hash != ?", (user_id, keep_hash))
+
+    def set_password(self, user_id: str, password_hash: str, keep_token: str | None = None) -> None:
+        """Change the password and sign the user out everywhere except `keep_token`."""
+        self._execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+        self.delete_user_tokens(user_id, keep=keep_token)
+
+    # ---- password reset tokens (single use; only the hash is stored) ----
+
+    def create_reset_token(self, user_id: str, ttl: timedelta) -> str:
+        token = secrets.token_urlsafe(32)
+        now = datetime.now(timezone.utc)
+        # One live link per user: a new request replaces the old one (and expired ones go too).
+        self._execute(
+            "DELETE FROM password_resets WHERE user_id = ? OR expires_at < ?",
+            (user_id, now.isoformat(timespec="seconds")),
+        )
+        self._execute(
+            "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+            (_hash_token(token), user_id, (now + ttl).isoformat(timespec="seconds")),
+        )
+        return token
+
+    def use_reset_token(self, token: str) -> str | None:
+        """Consume a reset token: the user ID if it was valid and unexpired, else None."""
+        with self._lock:
+            row = self._conn.execute(
+                "DELETE FROM password_resets WHERE token_hash = ? RETURNING user_id, expires_at",
+                (_hash_token(token),),
+            ).fetchone()
+            self._conn.commit()
+        return row["user_id"] if row and row["expires_at"] > _now() else None
 
     # ---- sessions -------------------------------------------------------
 

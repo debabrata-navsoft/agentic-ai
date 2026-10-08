@@ -14,6 +14,12 @@ export class AuthStore {
   readonly ready = signal(false);
   readonly error = signal<string | null>(null);
   readonly isAdmin = computed(() => this.user()?.role === 'admin');
+  /** The token from a reset link (/reset-password?token=…), read before the app rewrites the URL. */
+  readonly resetToken = signal(
+    location.pathname === '/reset-password'
+      ? new URLSearchParams(location.search).get('token')
+      : null,
+  );
 
   async init() {
     try {

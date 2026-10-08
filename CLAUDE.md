@@ -60,6 +60,11 @@ The `finally` block in the route always persists `messages` to SQLite.
 - Admins and users sign in separately: `POST /api/auth/login` refuses admins and
   `POST /api/auth/admin/login` (the `/admin` page, `AuthPage` with `[admin]="true"`) refuses non-admins,
   both before creating a session. Sign-up still logs in the first account, which becomes admin.
+- Passwords: `POST /api/auth/password` (change; signs out the user's other logins),
+  `/api/auth/forgot` (always 202, so it doesn't reveal which emails exist; sends after responding) and
+  `/api/auth/reset`. Reset tokens are single-use and hashed (`password_resets`). `app/mailer.py` emails
+  the link via `AGENT_SMTP_*`, or logs it when no SMTP host is set. The frontend reads
+  `/reset-password?token=` into `AuthStore.resetToken` before the URL sync rewrites the address.
 - Frontend pages map to URLs in `app.ts` (`PATHS`; Users is `/admin`). `ChatStore.canView` is the route
   guard: `setActiveView` sends a refused page to the chat.
 - Everything user-owned is scoped by `user_id`. `Store` methods take `user_id` first. Another user's

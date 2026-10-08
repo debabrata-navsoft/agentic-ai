@@ -52,6 +52,11 @@ export class AgentApi {
   signup = (name: string, email: string, password: string) =>
     this.post<User>('/auth/signup', { name, email, password });
   logout = () => this.post<void>('/auth/logout', {});
+  changePassword = (current_password: string, new_password: string) =>
+    this.post<void>('/auth/password', { current_password, new_password });
+  forgotPassword = (email: string) => this.post<void>('/auth/forgot', { email });
+  resetPassword = (token: string, new_password: string) =>
+    this.post<void>('/auth/reset', { token, new_password });
   users = () => this.get<User[]>('/admin/users');
   updateUser = (id: string, patch: Partial<Pick<User, 'role' | 'disabled'>>) =>
     firstValueFrom(this.http.patch<User>(`${API}/admin/users/${id}`, patch));

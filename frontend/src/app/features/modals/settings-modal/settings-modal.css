@@ -403,6 +403,7 @@ input:checked + .slider {
 }
 input:checked + .slider:before {
   transform: translateX(20px);
+  background-color: var(--on-accent); /* stays visible on a white (Mono) accent */
 }
 
 /* Action Box */

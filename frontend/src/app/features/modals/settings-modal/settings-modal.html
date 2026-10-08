@@ -54,6 +54,14 @@
             <svg lucideIcon="shield" size="16"></svg>
             <span>Account & Plan</span>
           </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'security'"
+            (click)="activeTab.set('security')"
+          >
+            <svg lucideIcon="lock" size="16"></svg>
+            <span>Account Security</span>
+          </button>
         </nav>
 
         <!-- Tab Content View -->
@@ -307,6 +315,19 @@
                     <span class="alert-ok">✓ Local cache successfully cleared!</span>
                   }
                 </div>
+              </section>
+            </div>
+          }
+
+          <!-- 6. ACCOUNT SECURITY TAB -->
+          @if (activeTab() === 'security') {
+            <div class="tab-pane">
+              <section class="section">
+                <h4 class="section-title">Change Password</h4>
+                <p class="section-sub">
+                  Other devices signed in to your account will be signed out.
+                </p>
+                <app-change-password />
               </section>
             </div>
           }

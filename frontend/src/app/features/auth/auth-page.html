@@ -27,23 +27,12 @@
 </aside>
 
 <main class="panel">
-  <form class="card" (submit)="submit($event)">
+  <form class="card" novalidate (submit)="submit($event)">
     <div class="logo big">S</div>
-    @if (admin()) {
-      <h1>Admin sign in</h1>
-      <p class="sub">Only administrator accounts can sign in here.</p>
-    } @else {
-      <h1>{{ mode() === 'signin' ? 'Welcome back' : 'Create your account' }}</h1>
-      <p class="sub">
-        {{
-          mode() === 'signin'
-            ? 'Sign in to continue to Synora.'
-            : 'Start working with your AI agent.'
-        }}
-      </p>
-    }
+    <h1>{{ text()[0] }}</h1>
+    <p class="sub">{{ text()[1] }}</p>
 
-    @if (!admin()) {
+    @if (!admin() && (mode() === 'signin' || mode() === 'signup')) {
       <div class="switch" role="tablist">
         <button
           type="button"
@@ -67,77 +56,132 @@
     @if (formError() ?? auth.error(); as err) {
       <div class="alert" role="alert">{{ err }}</div>
     }
+    @if (notice(); as msg) {
+      <div class="alert ok" role="status">{{ msg }}</div>
+    }
 
-    @if (mode() === 'signup') {
+    @if (has().name) {
       <label>
         <span>Name</span>
         <input
           name="name"
           autocomplete="name"
-          required
           maxlength="80"
           placeholder="Ada Lovelace"
+          [class.invalid]="submitted() && errors().name"
           [value]="name()"
           (input)="name.set(value($event))"
         />
+        @if (submitted() && errors().name; as err) {
+          <small class="field-error">{{ err }}</small>
+        }
       </label>
     }
 
-    <label>
-      <span>Email</span>
-      <input
-        name="email"
-        type="email"
-        autocomplete="email"
-        required
-        placeholder="you@example.com"
-        [value]="email()"
-        (input)="email.set(value($event))"
-      />
-    </label>
-
-    <label>
-      <span>Password</span>
-      <div class="password">
+    @if (has().email) {
+      <label>
+        <span>Email</span>
         <input
-          name="password"
-          required
-          [type]="showPassword() ? 'text' : 'password'"
-          [attr.minlength]="mode() === 'signup' ? 8 : null"
-          [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'"
-          [placeholder]="mode() === 'signup' ? 'At least 8 characters' : '••••••••'"
-          [value]="password()"
-          (input)="password.set(value($event))"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          [class.invalid]="submitted() && errors().email"
+          [value]="email()"
+          (input)="email.set(value($event))"
         />
-        <button
-          type="button"
-          class="reveal"
-          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
-          [title]="showPassword() ? 'Hide password' : 'Show password'"
-          (click)="showPassword.set(!showPassword())"
-        >
-          <svg [lucideIcon]="showPassword() ? 'eye-off' : 'eye'" size="18"></svg>
-        </button>
-      </div>
-    </label>
+        @if (submitted() && errors().email; as err) {
+          <small class="field-error">{{ err }}</small>
+        }
+      </label>
+    }
+
+    @if (has().password) {
+      <label>
+        <span class="label-row">
+          {{ mode() === 'reset' ? 'New password' : 'Password' }}
+          @if (mode() === 'signin') {
+            <button type="button" class="link small" (click)="setMode('forgot')">
+              Forgot password?
+            </button>
+          }
+        </span>
+        <div class="password">
+          <input
+            name="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'"
+            [placeholder]="mode() === 'signin' ? '••••••••' : 'At least 8 characters'"
+            [class.invalid]="submitted() && errors().password"
+            [value]="password()"
+            (input)="password.set(value($event))"
+          />
+          <button
+            type="button"
+            class="reveal"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            [title]="showPassword() ? 'Hide password' : 'Show password'"
+            (click)="showPassword.set(!showPassword())"
+          >
+            <svg [lucideIcon]="showPassword() ? 'eye-off' : 'eye'" size="18"></svg>
+          </button>
+        </div>
+        @if (submitted() && errors().password; as err) {
+          <small class="field-error">{{ err }}</small>
+        }
+      </label>
+    }
+
+    @if (has().confirm) {
+      <label>
+        <span>Confirm password</span>
+        <input
+          name="confirm"
+          autocomplete="new-password"
+          placeholder="Type it again"
+          [type]="showPassword() ? 'text' : 'password'"
+          [class.invalid]="submitted() && errors().confirm"
+          [value]="confirm()"
+          (input)="confirm.set(value($event))"
+        />
+        @if (submitted() && errors().confirm; as err) {
+          <small class="field-error">{{ err }}</small>
+        }
+      </label>
+    }
 
     <button class="primary" type="submit" [disabled]="busy()">
       @if (busy()) {
         <span class="spinner"></span>
       }
-      {{ admin() ? 'Sign in as admin' : mode() === 'signin' ? 'Sign in' : 'Create account' }}
+      {{ text()[2] }}
     </button>
 
     <p class="alt">
-      @if (admin()) {
-        Not an admin?
-        <button type="button" class="link" (click)="toRegularSignIn()">Regular sign in</button>
-      } @else if (mode() === 'signin') {
-        New to Synora?
-        <button type="button" class="link" (click)="setMode('signup')">Create an account</button>
-      } @else {
-        Already have an account?
-        <button type="button" class="link" (click)="setMode('signin')">Sign in</button>
+      @switch (mode()) {
+        @case ('signin') {
+          @if (admin()) {
+            Not an admin?
+            <button type="button" class="link" (click)="toRegularSignIn()">Regular sign in</button>
+          } @else {
+            New to Synora?
+            <button type="button" class="link" (click)="setMode('signup')">
+              Create an account
+            </button>
+          }
+        }
+        @case ('signup') {
+          Already have an account?
+          <button type="button" class="link" (click)="setMode('signin')">Sign in</button>
+        }
+        @case ('forgot') {
+          Remembered it?
+          <button type="button" class="link" (click)="setMode('signin')">Back to sign in</button>
+        }
+        @case ('reset') {
+          Link expired?
+          <button type="button" class="link" (click)="setMode('forgot')">Request a new one</button>
+        }
       }
     </p>
   </form>

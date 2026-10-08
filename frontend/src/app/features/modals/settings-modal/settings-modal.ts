@@ -1,15 +1,21 @@
 import { Component, HostListener, inject, input, output, signal } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 
-import { AccentColor, AppTheme, FontSize, SettingsStore } from '../../../core/services/settings-store';
+import {
+  AccentColor,
+  AppTheme,
+  FontSize,
+  SettingsStore,
+} from '../../../core/services/settings-store';
 import { AuthStore } from '../../../core/services/auth-store';
 import { ChatStore } from '../../../core/services/chat-store';
+import { ChangePassword } from './change-password/change-password';
 
-export type SettingsTab = 'appearance' | 'agent' | 'chat' | 'data' | 'account';
+export type SettingsTab = 'appearance' | 'agent' | 'chat' | 'data' | 'account' | 'security';
 
 @Component({
   selector: 'app-settings-modal',
-  imports: [LucideDynamicIcon],
+  imports: [LucideDynamicIcon, ChangePassword],
   templateUrl: './settings-modal.html',
   styleUrl: './settings-modal.css',
 })

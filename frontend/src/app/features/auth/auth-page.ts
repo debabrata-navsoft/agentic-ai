@@ -1,13 +1,40 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 
+import { AgentApi } from '../../core/services/agent-api';
 import { AuthStore } from '../../core/services/auth-store';
 import { ChatStore } from '../../core/services/chat-store';
+import {
+  apiErrorMessage,
+  confirmError,
+  emailError,
+  newPasswordError,
+  required,
+} from '../../core/utils/forms';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot' | 'reset';
 
-/** Sign-in / create-account screen shown until a user is signed in; at /admin, the admin sign-in. */
+/** Heading, subheading and button label for each mode. */
+const TEXT: Record<Mode, [string, string, string]> = {
+  signin: ['Welcome back', 'Sign in to continue to Synora.', 'Sign in'],
+  signup: ['Create your account', 'Start working with your AI agent.', 'Create account'],
+  forgot: [
+    'Forgot your password?',
+    "Enter your email and we'll send you a reset link.",
+    'Send reset link',
+  ],
+  reset: ['Choose a new password', 'Use at least 8 characters.', 'Update password'],
+};
+const ADMIN_SIGNIN = [
+  'Admin sign in',
+  'Only administrator accounts can sign in here.',
+  'Sign in as admin',
+];
+
+/**
+ * Sign in, sign up, forgot password, and reset password (from an emailed link). At /admin it's
+ * the admin sign-in: no sign-up, and only admin accounts get in.
+ */
 @Component({
   selector: 'app-auth-page',
   imports: [LucideDynamicIcon],
@@ -15,19 +42,56 @@ type Mode = 'signin' | 'signup';
   styleUrl: './auth-page.css',
 })
 export class AuthPage {
-  /** The admin sign-in page: no sign-up, and only admin accounts get in. */
   readonly admin = input(false);
 
   protected readonly auth = inject(AuthStore);
+  private readonly api = inject(AgentApi);
   private readonly store = inject(ChatStore);
-  private readonly selectedMode = signal<Mode>('signin');
-  protected readonly mode = computed<Mode>(() => (this.admin() ? 'signin' : this.selectedMode()));
+  private readonly selectedMode = signal<Mode>(this.auth.resetToken() ? 'reset' : 'signin');
+  protected readonly mode = computed<Mode>(() =>
+    this.admin() && this.selectedMode() === 'signup' ? 'signin' : this.selectedMode(),
+  );
+  protected readonly text = computed(() =>
+    this.admin() && this.mode() === 'signin' ? ADMIN_SIGNIN : TEXT[this.mode()],
+  );
+
   protected readonly name = signal('');
   protected readonly email = signal('');
   protected readonly password = signal('');
+  protected readonly confirm = signal('');
   protected readonly showPassword = signal(false);
   protected readonly busy = signal(false);
   protected readonly formError = signal<string | null>(null);
+  /** A success message, e.g. after requesting a reset link. */
+  protected readonly notice = signal<string | null>(null);
+  /** Field errors show after the first submit, then update as the user types. */
+  protected readonly submitted = signal(false);
+
+  /** Which fields each mode shows. */
+  protected readonly has = computed(() => {
+    const m = this.mode();
+    return {
+      name: m === 'signup',
+      email: m !== 'reset',
+      password: m !== 'forgot',
+      confirm: m === 'signup' || m === 'reset',
+    };
+  });
+
+  protected readonly errors = computed(() => {
+    const has = this.has();
+    const newPassword = this.mode() !== 'signin';
+    return {
+      name: has.name ? required(this.name(), 'Enter your name.') : null,
+      email: has.email ? emailError(this.email()) : null,
+      password: !has.password
+        ? null
+        : newPassword
+          ? newPasswordError(this.password())
+          : required(this.password(), 'Enter your password.'),
+      confirm: has.confirm ? confirmError(this.password(), this.confirm()) : null,
+    };
+  });
 
   private readonly userFeatures = [
     {
@@ -57,12 +121,14 @@ export class AuthPage {
 
   protected setMode(mode: Mode) {
     this.selectedMode.set(mode);
+    this.submitted.set(false);
     this.formError.set(null);
+    this.notice.set(null);
   }
 
   /** From the admin sign-in (/admin), back to the regular one (/). */
   protected toRegularSignIn() {
-    this.formError.set(null);
+    this.setMode('signin');
     this.store.setActiveView('chat');
   }
 
@@ -71,30 +137,39 @@ export class AuthPage {
   }
 
   protected async submit(ev: Event) {
-    ev.preventDefault(); // the browser has already checked required/type/minlength
-    if (this.busy()) return;
+    ev.preventDefault();
+    this.submitted.set(true);
+    if (this.busy() || Object.values(this.errors()).some(Boolean)) return;
     this.busy.set(true);
     this.formError.set(null);
+    this.notice.set(null);
     try {
-      if (this.mode() === 'signin') {
-        await this.auth.login(this.email(), this.password(), this.admin());
-      } else {
-        await this.auth.signup(this.name(), this.email(), this.password());
+      switch (this.mode()) {
+        case 'signin':
+          await this.auth.login(this.email(), this.password(), this.admin());
+          break;
+        case 'signup':
+          await this.auth.signup(this.name(), this.email(), this.password());
+          break;
+        case 'forgot':
+          await this.api.forgotPassword(this.email());
+          this.notice.set(
+            "If an account exists for that email, we've sent a reset link. Check your inbox.",
+          );
+          break;
+        case 'reset':
+          await this.api.resetPassword(this.auth.resetToken()!, this.password());
+          this.auth.resetToken.set(null);
+          this.setMode('signin');
+          this.password.set('');
+          this.confirm.set('');
+          this.notice.set('Password updated. Sign in with your new password.');
+          break;
       }
     } catch (e) {
-      this.formError.set(errorMessage(e));
+      this.formError.set(apiErrorMessage(e));
     } finally {
       this.busy.set(false);
     }
   }
-}
-
-function errorMessage(e: unknown): string {
-  if (!(e instanceof HttpErrorResponse)) return 'Something went wrong. Please try again.';
-  if (e.status === 0 || e.status >= 500) return 'Cannot reach the server. Is the backend running?';
-  const detail = e.error?.detail;
-  if (typeof detail === 'string') return detail;
-  // FastAPI validation errors: [{loc: [..., field], msg}, ...]
-  if (Array.isArray(detail) && detail.length) return `${detail[0].loc?.at(-1)}: ${detail[0].msg}`;
-  return `Request failed (${e.status})`;
 }
