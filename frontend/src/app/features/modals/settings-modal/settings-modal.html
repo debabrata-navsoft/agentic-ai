@@ -323,7 +323,9 @@
                       <strong>{{ u.name }}</strong>
                       <span class="email">{{ u.email }}</span>
                       <div class="roles">
-                        <span class="badge">{{ auth.isAdmin() ? 'Administrator' : 'Workspace Member' }}</span>
+                        @if (auth.isAdmin()) {
+                          <span class="badge">Administrator</span>
+                        }
                         <span class="badge plan-badge">{{ settings.plan() === 'pro' ? 'Pro Member' : 'Free Tier' }}</span>
                       </div>
                     </div>

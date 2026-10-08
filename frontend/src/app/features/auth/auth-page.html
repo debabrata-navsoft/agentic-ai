@@ -4,9 +4,15 @@
     <span class="brand-name">Synora</span>
   </div>
   <div class="pitch">
-    <h2>An AI agent that plans, uses tools, and gets things done.</h2>
+    <h2>
+      {{
+        admin()
+          ? 'Admin console: manage who can use Synora.'
+          : 'An AI agent that plans, uses tools, and gets things done.'
+      }}
+    </h2>
     <ul>
-      @for (f of features; track f.title) {
+      @for (f of features(); track f.title) {
         <li>
           <span class="feature-icon"><svg [lucideIcon]="f.icon" size="18"></svg></span>
           <div>
@@ -23,31 +29,40 @@
 <main class="panel">
   <form class="card" (submit)="submit($event)">
     <div class="logo big">S</div>
-    <h1>{{ mode() === 'signin' ? 'Welcome back' : 'Create your account' }}</h1>
-    <p class="sub">
-      {{
-        mode() === 'signin' ? 'Sign in to continue to Synora.' : 'Start working with your AI agent.'
-      }}
-    </p>
+    @if (admin()) {
+      <h1>Admin sign in</h1>
+      <p class="sub">Only administrator accounts can sign in here.</p>
+    } @else {
+      <h1>{{ mode() === 'signin' ? 'Welcome back' : 'Create your account' }}</h1>
+      <p class="sub">
+        {{
+          mode() === 'signin'
+            ? 'Sign in to continue to Synora.'
+            : 'Start working with your AI agent.'
+        }}
+      </p>
+    }
 
-    <div class="switch" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        [class.active]="mode() === 'signin'"
-        (click)="setMode('signin')"
-      >
-        Sign in
-      </button>
-      <button
-        type="button"
-        role="tab"
-        [class.active]="mode() === 'signup'"
-        (click)="setMode('signup')"
-      >
-        Sign up
-      </button>
-    </div>
+    @if (!admin()) {
+      <div class="switch" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          [class.active]="mode() === 'signin'"
+          (click)="setMode('signin')"
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [class.active]="mode() === 'signup'"
+          (click)="setMode('signup')"
+        >
+          Sign up
+        </button>
+      </div>
+    }
 
     @if (formError() ?? auth.error(); as err) {
       <div class="alert" role="alert">{{ err }}</div>
@@ -110,11 +125,14 @@
       @if (busy()) {
         <span class="spinner"></span>
       }
-      {{ mode() === 'signin' ? 'Sign in' : 'Create account' }}
+      {{ admin() ? 'Sign in as admin' : mode() === 'signin' ? 'Sign in' : 'Create account' }}
     </button>
 
     <p class="alt">
-      @if (mode() === 'signin') {
+      @if (admin()) {
+        Not an admin?
+        <button type="button" class="link" (click)="toRegularSignIn()">Regular sign in</button>
+      } @else if (mode() === 'signin') {
         New to Synora?
         <button type="button" class="link" (click)="setMode('signup')">Create an account</button>
       } @else {

@@ -1,12 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { AuthStore } from '../../core/services/auth-store';
+import { ChatStore } from '../../core/services/chat-store';
 
 type Mode = 'signin' | 'signup';
 
-/** Sign-in / create-account screen shown until a user is signed in. */
+/** Sign-in / create-account screen shown until a user is signed in; at /admin, the admin sign-in. */
 @Component({
   selector: 'app-auth-page',
   imports: [LucideDynamicIcon],
@@ -14,8 +15,13 @@ type Mode = 'signin' | 'signup';
   styleUrl: './auth-page.css',
 })
 export class AuthPage {
+  /** The admin sign-in page: no sign-up, and only admin accounts get in. */
+  readonly admin = input(false);
+
   protected readonly auth = inject(AuthStore);
-  protected readonly mode = signal<Mode>('signin');
+  private readonly store = inject(ChatStore);
+  private readonly selectedMode = signal<Mode>('signin');
+  protected readonly mode = computed<Mode>(() => (this.admin() ? 'signin' : this.selectedMode()));
   protected readonly name = signal('');
   protected readonly email = signal('');
   protected readonly password = signal('');
@@ -23,7 +29,7 @@ export class AuthPage {
   protected readonly busy = signal(false);
   protected readonly formError = signal<string | null>(null);
 
-  protected readonly features = [
+  private readonly userFeatures = [
     {
       icon: 'globe',
       title: 'Researches the web',
@@ -40,10 +46,24 @@ export class AuthPage {
       text: 'Keeps long-term notes across your conversations.',
     },
   ];
+  private readonly adminFeatures = [
+    { icon: 'users', title: 'Manage users', text: 'See every account that uses Synora.' },
+    { icon: 'shield', title: 'Control access', text: 'Promote admins or disable accounts.' },
+    { icon: 'log-out', title: 'Instant sign-out', text: 'Disabling a user ends their session.' },
+  ];
+  protected readonly features = computed(() =>
+    this.admin() ? this.adminFeatures : this.userFeatures,
+  );
 
   protected setMode(mode: Mode) {
-    this.mode.set(mode);
+    this.selectedMode.set(mode);
     this.formError.set(null);
+  }
+
+  /** From the admin sign-in (/admin), back to the regular one (/). */
+  protected toRegularSignIn() {
+    this.formError.set(null);
+    this.store.setActiveView('chat');
   }
 
   protected value(ev: Event) {
@@ -57,7 +77,7 @@ export class AuthPage {
     this.formError.set(null);
     try {
       if (this.mode() === 'signin') {
-        await this.auth.login(this.email(), this.password());
+        await this.auth.login(this.email(), this.password(), this.admin());
       } else {
         await this.auth.signup(this.name(), this.email(), this.password());
       }

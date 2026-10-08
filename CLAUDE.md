@@ -57,6 +57,11 @@ The `finally` block in the route always persists `messages` to SQLite.
 - Roles are `user` and `admin`. The first account to sign up becomes admin and claims pre-account data:
   rows with a NULL `user_id` (`Store.create_user`) and loose workspace files (`claim_legacy_workspace`).
   Admins can't change their own role or status, so at least one admin always remains.
+- Admins and users sign in separately: `POST /api/auth/login` refuses admins and
+  `POST /api/auth/admin/login` (the `/admin` page, `AuthPage` with `[admin]="true"`) refuses non-admins,
+  both before creating a session. Sign-up still logs in the first account, which becomes admin.
+- Frontend pages map to URLs in `app.ts` (`PATHS`; Users is `/admin`). `ChatStore.canView` is the route
+  guard: `setActiveView` sends a refused page to the chat.
 - Everything user-owned is scoped by `user_id`. `Store` methods take `user_id` first. Another user's
   session or note is reported as 404, not 403. Tools read `ctx.user_id`, and each user's file workspace is
   `AGENT_WORKSPACE_DIR/<user_id>`.

@@ -1,33 +1,49 @@
-@if (error(); as err) {
-  <p class="error">{{ err }}</p>
-}
-@for (u of users(); track u.id) {
-  <div class="card" [class.disabled]="u.disabled">
-    <div class="card-head">
-      <strong class="truncate">{{ u.name }}</strong>
-      @if (u.role === 'admin') {
-        <span class="badge">admin</span>
-      }
-      @if (u.disabled) {
-        <span class="badge off">disabled</span>
+<header class="page-topbar">
+  <div class="page-icon"><svg lucideIcon="users" size="20"></svg></div>
+  <div class="titles">
+    <h2>Users</h2>
+    <p>
+      Everyone with an account. Admins can promote or disable users; a disabled user is signed out.
+    </p>
+  </div>
+  <button type="button" class="back" (click)="store.setActiveView('chat')">
+    <svg lucideIcon="message-square-text" size="15"></svg>
+    <span>Back to Chat</span>
+  </button>
+</header>
+
+<main class="grid">
+  @if (error(); as err) {
+    <p class="error">{{ err }}</p>
+  }
+  @for (u of users(); track u.id) {
+    <div class="card" [class.disabled]="u.disabled">
+      <div class="card-head">
+        <strong class="truncate">{{ u.name }}</strong>
+        @if (u.role === 'admin') {
+          <span class="badge">admin</span>
+        }
+        @if (u.disabled) {
+          <span class="badge off">disabled</span>
+        }
+      </div>
+      <p class="truncate">{{ u.email }}</p>
+      @if (u.id === auth.user()?.id) {
+        <p class="you">This is you</p>
+      } @else {
+        <div class="actions">
+          <button (click)="update(u, { role: u.role === 'admin' ? 'user' : 'admin' })">
+            {{ u.role === 'admin' ? 'Make user' : 'Make admin' }}
+          </button>
+          <button [class.danger]="!u.disabled" (click)="update(u, { disabled: !u.disabled })">
+            {{ u.disabled ? 'Enable' : 'Disable' }}
+          </button>
+        </div>
       }
     </div>
-    <p class="truncate">{{ u.email }}</p>
-    @if (u.id === auth.user()?.id) {
-      <p class="you">This is you</p>
-    } @else {
-      <div class="actions">
-        <button (click)="update(u, { role: u.role === 'admin' ? 'user' : 'admin' })">
-          {{ u.role === 'admin' ? 'Make user' : 'Make admin' }}
-        </button>
-        <button [class.danger]="!u.disabled" (click)="update(u, { disabled: !u.disabled })">
-          {{ u.disabled ? 'Enable' : 'Disable' }}
-        </button>
-      </div>
+  } @empty {
+    @if (!error()) {
+      <p class="empty">Loading users…</p>
     }
-  </div>
-} @empty {
-  @if (!error()) {
-    <p class="empty">Loading users…</p>
   }
-}
+</main>

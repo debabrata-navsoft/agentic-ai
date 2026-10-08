@@ -17,8 +17,13 @@
       @case ('tools') {
         <app-tools-page />
       }
+      @case ('users') {
+        @if (auth.isAdmin()) {
+          <app-user-admin />
+        }
+      }
     }
   } @else {
-    <app-auth-page />
+    <app-auth-page [admin]="store.activeView() === 'users'" />
   }
 }

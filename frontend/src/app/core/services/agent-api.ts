@@ -47,7 +47,8 @@ export class AgentApi {
 
   // The login is an httpOnly cookie on /api, so these calls never handle a token themselves.
   me = () => this.get<User>('/auth/me');
-  login = (email: string, password: string) => this.post<User>('/auth/login', { email, password });
+  login = (email: string, password: string, admin = false) =>
+    this.post<User>(admin ? '/auth/admin/login' : '/auth/login', { email, password });
   signup = (name: string, email: string, password: string) =>
     this.post<User>('/auth/signup', { name, email, password });
   logout = () => this.post<void>('/auth/logout', {});

@@ -27,8 +27,9 @@ export class AuthStore {
     }
   }
 
-  async login(email: string, password: string) {
-    this.user.set(await this.api.login(email, password));
+  /** `admin` uses the admin sign-in, which refuses non-admin accounts. */
+  async login(email: string, password: string, admin = false) {
+    this.user.set(await this.api.login(email, password, admin));
     this.error.set(null);
   }
 

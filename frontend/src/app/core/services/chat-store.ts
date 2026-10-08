@@ -20,7 +20,7 @@ import { reduceEvent } from '../utils/reduce-event';
 
 const NOTE_TOOLS = new Set(['save_note', 'delete_note']);
 
-export type ActiveView = 'chat' | 'agents' | 'docs' | 'memory' | 'tools';
+export type ActiveView = 'chat' | 'agents' | 'docs' | 'memory' | 'tools' | 'users';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
@@ -139,8 +139,17 @@ export class ChatStore {
     this.documents.update((l) => l.filter((d) => d.id !== id));
   }
 
+  /**
+   * Route guard: the Users page (/admin) is for admins. Signed out, it stays allowed so /admin
+   * can show the admin sign-in.
+   */
+  canView(view: ActiveView) {
+    return view !== 'users' || !this.auth.user() || this.auth.isAdmin();
+  }
+
+  /** Navigate; a page the guard refuses opens the chat instead. */
   setActiveView(view: ActiveView) {
-    this.activeView.set(view);
+    this.activeView.set(this.canView(view) ? view : 'chat');
   }
 
   /** Start a new chat, optionally running as one of the user's agents. */

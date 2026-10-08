@@ -105,7 +105,7 @@
         <div class="avatar">{{ initial() }}</div>
         <div class="who">
           <div class="truncate name">{{ u.name }}</div>
-          <div class="truncate sub">{{ auth.isAdmin() ? 'Admin' : 'Workspace' }} · {{ u.email }}</div>
+          <div class="truncate sub">{{ auth.isAdmin() ? 'Admin · ' : '' }}{{ u.email }}</div>
         </div>
         <div class="menu-trigger" title="Open user menu">
           <svg [lucideIcon]="menuOpen() ? 'chevron-down' : 'chevron-up'" size="16"></svg>

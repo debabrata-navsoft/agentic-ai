@@ -3,12 +3,12 @@ import { LucideDynamicIcon } from '@lucide/angular';
 
 import { SessionSummary } from '../../core/models/chat.models';
 import { AuthStore } from '../../core/services/auth-store';
-import { ChatStore } from '../../core/services/chat-store';
+import { ActiveView, ChatStore } from '../../core/services/chat-store';
 import { SettingsStore } from '../../core/services/settings-store';
 import { SettingsModal } from '../modals/settings-modal/settings-modal';
 import { UpgradeModal } from '../modals/upgrade-modal/upgrade-modal';
 
-type Tab = 'chat' | 'agents' | 'docs' | 'memory' | 'tools';
+type Tab = ActiveView;
 interface TabDef {
   id: Tab;
   label: string;
@@ -64,6 +64,7 @@ export class Sidebar {
     },
     { id: 'memory', label: 'Memory', icon: 'brain', count: () => this.store.notes().length },
     { id: 'tools', label: 'Tools', icon: 'wrench', count: () => this.store.tools().length },
+    ...(this.auth.isAdmin() ? [{ id: 'users' as const, label: 'Users', icon: 'users' }] : []),
   ]);
 
   protected onNavClick(id: Tab) {

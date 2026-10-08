@@ -123,17 +123,29 @@ async def signup(body: SignupRequest, request: Request, response: Response):
     return _start_login(request, response, user)
 
 
-@router.post("/auth/login")
-async def login(body: Credentials, request: Request, response: Response):
-    store = request.app.state.store
-    creds = store.get_user_credentials(body.email)
+async def _sign_in(request: Request, response: Response, body: Credentials, *, admin: bool) -> dict[str, Any]:
+    """Admins sign in only on the admin page and everyone else only on the regular one."""
+    creds = request.app.state.store.get_user_credentials(body.email)
     ok = await asyncio.to_thread(verify_password, body.password, creds["password_hash"] if creds else _DUMMY_HASH)
     if creds is None or not ok:
         raise HTTPException(401, "Incorrect email or password")
     if creds["disabled"]:
         raise HTTPException(403, "This account has been disabled")
+    if (creds["role"] == "admin") != admin:
+        raise HTTPException(403, "This account is not an admin. Use the regular sign-in page." if admin
+                            else "Admin accounts sign in on the admin page (/admin).")
     creds.pop("password_hash")
     return _start_login(request, response, creds)
+
+
+@router.post("/auth/login")
+async def login(body: Credentials, request: Request, response: Response):
+    return await _sign_in(request, response, body, admin=False)
+
+
+@router.post("/auth/admin/login")
+async def admin_login(body: Credentials, request: Request, response: Response):
+    return await _sign_in(request, response, body, admin=True)
 
 
 @router.post("/auth/logout", status_code=204)
