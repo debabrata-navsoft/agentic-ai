@@ -138,6 +138,27 @@
   border-color: color-mix(in srgb, var(--err) 40%, transparent);
 }
 
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.speak {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+}
+.speak:hover,
+.speak.active {
+  color: var(--text);
+  background: var(--panel-2);
+}
 .meta {
   font-size: 12px;
   color: var(--muted);

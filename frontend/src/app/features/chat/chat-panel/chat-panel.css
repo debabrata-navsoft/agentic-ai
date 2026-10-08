@@ -95,102 +95,28 @@
   line-height: 1.5;
 }
 
-/* Prompt Types Grid on Welcome Screen */
-.prompt-types-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.type-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  text-align: left;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 85%, transparent);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
-}
-
-.type-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
-  background: var(--panel-2);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-}
-
-.type-card.active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 15%, var(--panel-2));
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.type-icon-wrapper {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: var(--accent);
-}
-
-.type-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  overflow: hidden;
-}
-
-.type-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.type-header strong {
-  font-size: 13.5px;
-  color: var(--text);
-}
-
-.type-badge {
-  font: 10px var(--mono);
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.type-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 2px 0 4px;
-}
-
-.type-sample {
-  font-size: 11.5px;
-  color: color-mix(in srgb, var(--text) 70%, transparent);
-  font-style: italic;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .tool-chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  margin-top: 14px;
+  margin-top: 6px;
+}
+
+/* Empty chat: the welcome and composer sit together mid-page; the first message moves the
+   composer back to the bottom. */
+:host(.empty) .messages {
+  flex: none;
+  margin-top: auto;
+  padding-bottom: 0;
+}
+:host(.empty) .welcome {
+  margin: 0 auto 8px;
+}
+/* The extra bottom padding lifts the group slightly above the middle, where the eye expects it. */
+:host(.empty) .composer {
+  margin-bottom: auto;
+  padding-bottom: 12vh;
 }
 
 /* Composer Section */
@@ -204,61 +130,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-/* Prompt Types Bar directly above the input box */
-.prompt-types-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 4px;
-}
-
-.bar-label {
-  font: 11px/1 var(--mono);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
-
-.chips-scroll {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.chips-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.prompt-type-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font: 11.5px var(--mono);
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.prompt-type-chip:hover {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: var(--panel-2);
-}
-
-.prompt-type-chip.active {
-  color: var(--on-accent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, black), var(--accent));
-  border-color: var(--accent-2);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .composer-box {
@@ -411,13 +282,4 @@ textarea::placeholder {
 
 .hint.error {
   color: var(--err);
-}
-
-@media (max-width: 760px) {
-  .prompt-types-grid {
-    grid-template-columns: 1fr;
-  }
-  .prompt-types-bar {
-    overflow-x: auto;
-  }
 }

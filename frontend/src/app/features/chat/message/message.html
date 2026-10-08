@@ -64,13 +64,29 @@
       @if (m.running && !m.parts.length) {
         <div class="typing"><span></span><span></span><span></span></div>
       }
-      @if (m.usage) {
-        <div class="meta">
-          {{ m.steps }} step{{ m.steps === 1 ? '' : 's' }} ·
-          {{ m.usage.input_tokens + m.usage.cache_read_input_tokens }} in ({{
-            m.usage.cache_read_input_tokens
-          }}
-          cached) · {{ m.usage.output_tokens }} out
+      @if (!m.running) {
+        <div class="foot">
+          @if (speech.supported) {
+            <button
+              type="button"
+              class="speak"
+              [class.active]="speech.speaking() === m"
+              [title]="speech.speaking() === m ? 'Stop reading' : 'Read aloud'"
+              [attr.aria-label]="speech.speaking() === m ? 'Stop reading' : 'Read aloud'"
+              (click)="readAloud()"
+            >
+              <svg [lucideIcon]="speech.speaking() === m ? 'square' : 'volume-2'" size="14"></svg>
+            </button>
+          }
+          @if (m.usage) {
+            <span class="meta">
+              {{ m.steps }} step{{ m.steps === 1 ? '' : 's' }} ·
+              {{ m.usage.input_tokens + m.usage.cache_read_input_tokens }} in ({{
+                m.usage.cache_read_input_tokens
+              }}
+              cached) · {{ m.usage.output_tokens }} out
+            </span>
+          }
         </div>
       }
     </div>

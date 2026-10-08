@@ -24,17 +24,9 @@
       <img class="logo big" src="logo.svg" alt="Synora AI" />
       <h2>What should we work on?</h2>
       <p>
-        Select a prompt type below or describe your task. Synora plans, searches the web, executes
+        Describe your task, or pick a mode or agent with +. Synora plans, searches the web, writes
         code, remembers facts, and queries your documents.
       </p>
-
-      @if (store.tools().length) {
-        <div class="tool-chips">
-          @for (t of store.tools(); track t.name) {
-            <span class="chip">{{ t.label }}</span>
-          }
-        </div>
-      }
     </div>
   }
 
@@ -47,24 +39,6 @@
 
 <footer class="composer">
   <div class="composer-container">
-    <!-- Prompt Types Selector Bar -->
-    <div class="prompt-types-bar">
-      <span class="bar-label">Prompt Mode:</span>
-      <div class="chips-scroll">
-        @for (pt of promptTypes; track pt.id) {
-          <button
-            type="button"
-            class="prompt-type-chip"
-            [class.active]="selectedPromptType() === pt.id"
-            (click)="selectPromptType(pt.id)"
-          >
-            <svg [lucideIcon]="pt.icon" size="13"></svg>
-            <span>{{ pt.label }}</span>
-          </button>
-        }
-      </div>
-    </div>
-
     <!-- Composer Input Box -->
     <div class="composer-box" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
       @if (previews().length) {
@@ -92,7 +66,12 @@
         </div>
       }
       <div class="input-row">
-        <app-composer-menu (attach)="filePicker.click()" />
+        <app-composer-menu
+          [modes]="promptTypes"
+          [activeMode]="selectedPromptType()"
+          (mode)="selectPromptType($event)"
+          (attach)="filePicker.click()"
+        />
         <input
           #filePicker
           type="file"
@@ -115,15 +94,24 @@
             <svg lucideIcon="square" size="14"></svg>
           </button>
         } @else {
-          <button
-            class="send"
-            (click)="submit()"
-            [disabled]="!canSend()"
-            title="Send (Enter)"
-            aria-label="Send"
-          >
-            <svg lucideIcon="arrow-up" size="18"></svg>
-          </button>
+          <!-- Empty draft: the voice button; with text: Send. -->
+          <app-voice-input
+            [class.hidden]="showSend()"
+            (started)="startDictation()"
+            (heard)="onHeard($event)"
+            (failed)="attachError.set($event)"
+          />
+          @if (showSend()) {
+            <button
+              class="send"
+              (click)="submit()"
+              [disabled]="!canSend()"
+              title="Send (Enter)"
+              aria-label="Send"
+            >
+              <svg lucideIcon="arrow-up" size="18"></svg>
+            </button>
+          }
         }
       </div>
       <div class="meta-row">
@@ -143,6 +131,13 @@
       <p class="hint error">{{ err }}</p>
     } @else {
       <p class="hint">Shift + Enter for new line • Enter to send • Paste or drop files to attach</p>
+    }
+    @if (!store.messages().length && store.tools().length) {
+      <div class="tool-chips">
+        @for (t of store.tools(); track t.name) {
+          <span class="chip">{{ t.label }}</span>
+        }
+      </div>
     }
   </div>
 </footer>

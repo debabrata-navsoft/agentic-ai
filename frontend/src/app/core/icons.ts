@@ -1,5 +1,6 @@
 import {
   LucideArrowUp,
+  LucideAudioLines,
   LucideBot,
   LucideBrain,
   LucideCalculator,
@@ -33,6 +34,7 @@ import {
   LucideTrash,
   LucideUpload,
   LucideUsers,
+  LucideVolume2,
   LucideWrench,
   LucideX,
   LucideZap,
@@ -44,6 +46,7 @@ import {
  */
 export const APP_ICONS = [
   LucideArrowUp,
+  LucideAudioLines,
   LucideBot,
   LucideBrain,
   LucideCalculator,
@@ -77,6 +80,7 @@ export const APP_ICONS = [
   LucideTrash,
   LucideUpload,
   LucideUsers,
+  LucideVolume2,
   LucideWrench,
   LucideX,
   LucideZap,
