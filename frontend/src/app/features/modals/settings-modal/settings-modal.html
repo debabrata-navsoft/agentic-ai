@@ -1,0 +1,374 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="onBackdropClick($event)">
+    <div class="modal-dialog">
+      <header class="modal-head">
+        <div class="modal-title">
+          <svg lucideIcon="settings" size="18"></svg>
+          <h3>Workspace Settings</h3>
+        </div>
+        <button class="modal-close" (click)="close()" aria-label="Close settings">
+          <svg lucideIcon="x" size="18"></svg>
+        </button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Sidebar Navigation Tabs -->
+        <nav class="settings-nav">
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'appearance'"
+            (click)="activeTab.set('appearance')"
+          >
+            <svg lucideIcon="sun" size="16"></svg>
+            <span>Appearance & Theme</span>
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'agent'"
+            (click)="activeTab.set('agent')"
+          >
+            <svg lucideIcon="sparkles" size="16"></svg>
+            <span>Agent & AI Engine</span>
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'chat'"
+            (click)="activeTab.set('chat')"
+          >
+            <svg lucideIcon="message-square-text" size="16"></svg>
+            <span>Chat & Shortcuts</span>
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'data'"
+            (click)="activeTab.set('data')"
+          >
+            <svg lucideIcon="download" size="16"></svg>
+            <span>Data & Storage</span>
+          </button>
+          <button
+            class="tab-btn"
+            [class.active]="activeTab() === 'account'"
+            (click)="activeTab.set('account')"
+          >
+            <svg lucideIcon="shield" size="16"></svg>
+            <span>Account & Plan</span>
+          </button>
+        </nav>
+
+        <!-- Tab Content View -->
+        <div class="settings-content">
+          <!-- 1. APPEARANCE & THEME TAB -->
+          @if (activeTab() === 'appearance') {
+            <div class="tab-pane">
+              <section class="section">
+                <h4 class="section-title">Color Theme</h4>
+                <p class="section-sub">Choose your preferred workspace aesthetic.</p>
+                <div class="theme-grid">
+                  @for (t of themes; track t.id) {
+                    <button
+                      type="button"
+                      class="theme-card"
+                      [class.active]="settings.theme() === t.id"
+                      (click)="settings.setTheme(t.id)"
+                    >
+                      <div class="theme-icon">
+                        <svg [lucideIcon]="t.icon" size="20"></svg>
+                      </div>
+                      <div class="theme-info">
+                        <strong>{{ t.label }}</strong>
+                        <small>{{ t.desc }}</small>
+                      </div>
+                      @if (settings.theme() === t.id) {
+                        <span class="active-check">
+                          <svg lucideIcon="check" size="14"></svg>
+                        </span>
+                      }
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="section">
+                <h4 class="section-title">Accent Palette</h4>
+                <p class="section-sub">Select a brand highlight color across buttons and active indicators.</p>
+                <div class="accent-picker">
+                  @for (a of accents; track a.id) {
+                    <button
+                      type="button"
+                      class="accent-pill"
+                      [class.active]="settings.accent() === a.id"
+                      (click)="settings.setAccent(a.id)"
+                    >
+                      <span class="color-swatch" [style.background-color]="a.color"></span>
+                      <span>{{ a.label }}</span>
+                      @if (settings.accent() === a.id) {
+                        <svg lucideIcon="check" size="13"></svg>
+                      }
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="section">
+                <h4 class="section-title">Interface Font Scaling</h4>
+                <p class="section-sub">Adjust text size for higher density or greater comfort.</p>
+                <div class="segmented-control">
+                  <button
+                    type="button"
+                    [class.active]="settings.fontSize() === 'compact'"
+                    (click)="settings.setFontSize('compact')"
+                  >
+                    Compact (13.5px)
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="settings.fontSize() === 'normal'"
+                    (click)="settings.setFontSize('normal')"
+                  >
+                    Normal (15px)
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="settings.fontSize() === 'large'"
+                    (click)="settings.setFontSize('large')"
+                  >
+                    Comfortable (16.5px)
+                  </button>
+                </div>
+              </section>
+            </div>
+          }
+
+          <!-- 2. AGENT & AI ENGINE TAB -->
+          @if (activeTab() === 'agent') {
+            <div class="tab-pane">
+              <section class="section">
+                <h4 class="section-title">Autonomous Model Engine</h4>
+                <p class="section-sub">Configured Claude model for tool orchestration and planning.</p>
+                <div class="engine-list">
+                  <label class="radio-card" [class.selected]="settings.model() === 'claude-3-5-sonnet'">
+                    <input
+                      type="radio"
+                      name="model"
+                      value="claude-3-5-sonnet"
+                      [checked]="settings.model() === 'claude-3-5-sonnet'"
+                      (change)="settings.setModel('claude-3-5-sonnet')"
+                    />
+                    <div class="radio-content">
+                      <strong>Claude 3.5 Sonnet (Recommended)</strong>
+                      <p>SOTA reasoning, coding, tool coordination, and fast structured outputs.</p>
+                    </div>
+                  </label>
+                  <label class="radio-card" [class.selected]="settings.model() === 'claude-3-opus'">
+                    <input
+                      type="radio"
+                      name="model"
+                      value="claude-3-opus"
+                      [checked]="settings.model() === 'claude-3-opus'"
+                      (change)="settings.setModel('claude-3-opus')"
+                    />
+                    <div class="radio-content">
+                      <strong>Claude 3 Opus</strong>
+                      <p>Deep analytical synthesis and complex multi-step reasoning.</p>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <section class="section">
+                <h4 class="section-title">Default Prompt Mode</h4>
+                <p class="section-sub">Choose which prompt mode initializes for new chat sessions.</p>
+                <div class="prompt-grid">
+                  @for (pm of promptModes; track pm.id) {
+                    <button
+                      type="button"
+                      class="prompt-btn"
+                      [class.active]="settings.defaultPromptMode() === pm.id"
+                      (click)="settings.setDefaultPromptMode(pm.id)"
+                    >
+                      <svg [lucideIcon]="pm.icon" size="14"></svg>
+                      <span>{{ pm.label }}</span>
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <section class="section">
+                <h4 class="section-title">Thinking & Planning Effort</h4>
+                <p class="section-sub">Determines budget for hidden chain-of-thought reflections.</p>
+                <div class="segmented-control">
+                  <button
+                    type="button"
+                    [class.active]="settings.reasoningEffort() === 'low'"
+                    (click)="settings.setReasoningEffort('low')"
+                  >
+                    Low (Fast)
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="settings.reasoningEffort() === 'medium'"
+                    (click)="settings.setReasoningEffort('medium')"
+                  >
+                    Medium
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="settings.reasoningEffort() === 'high'"
+                    (click)="settings.setReasoningEffort('high')"
+                  >
+                    High (Deep Analysis)
+                  </button>
+                </div>
+              </section>
+            </div>
+          }
+
+          <!-- 3. CHAT & SHORTCUTS TAB -->
+          @if (activeTab() === 'chat') {
+            <div class="tab-pane">
+              <section class="section">
+                <div class="toggle-row">
+                  <div>
+                    <strong>Send with Enter Key</strong>
+                    <p class="toggle-desc">Press Enter to send the message, or Shift + Enter for a new line.</p>
+                  </div>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [checked]="settings.sendOnEnter()"
+                      (change)="settings.toggleSendOnEnter()"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="toggle-row">
+                  <div>
+                    <strong>Show Runtime Latency & Model Banner</strong>
+                    <p class="toggle-desc">Display connection ping and model details in the chat workspace.</p>
+                  </div>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [checked]="settings.showLatency()"
+                      (change)="settings.toggleShowLatency()"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="toggle-row">
+                  <div>
+                    <strong>Sound Effects</strong>
+                    <p class="toggle-desc">Play subtle audio notification upon agent loop task completion.</p>
+                  </div>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      [checked]="settings.soundEffects()"
+                      (change)="settings.toggleSoundEffects()"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </section>
+            </div>
+          }
+
+          <!-- 4. DATA & STORAGE TAB -->
+          @if (activeTab() === 'data') {
+            <div class="tab-pane">
+              <section class="section">
+                <h4 class="section-title">Export Workspace Conversations</h4>
+                <p class="section-sub">Download your chat histories, reasoning traces, and notes as structured JSON.</p>
+                <div class="action-box">
+                  <div class="stats-pills">
+                    <span class="chip">{{ chat.sessions().length }} Conversations</span>
+                    <span class="chip">{{ chat.documents().length }} RAG Docs</span>
+                    <span class="chip">{{ chat.notes().length }} Memories</span>
+                  </div>
+                  <button type="button" class="btn primary" (click)="exportAll()">
+                    <svg lucideIcon="download" size="15"></svg>
+                    Download Backup (.json)
+                  </button>
+                </div>
+              </section>
+
+              <section class="section">
+                <h4 class="section-title">Local Cache Management</h4>
+                <p class="section-sub">Clear stored local drafts or cached conversation metadata.</p>
+                <div class="action-box">
+                  <button type="button" class="btn outline" (click)="clearLocalCache()">
+                    <svg lucideIcon="trash" size="14"></svg>
+                    Clear Local Session Cache
+                  </button>
+                  @if (cacheCleared()) {
+                    <span class="alert-ok">✓ Local cache successfully cleared!</span>
+                  }
+                </div>
+              </section>
+            </div>
+          }
+
+          <!-- 5. ACCOUNT & PLAN TAB -->
+          @if (activeTab() === 'account') {
+            <div class="tab-pane">
+              @if (auth.user(); as u) {
+                <section class="section">
+                  <h4 class="section-title">User Profile</h4>
+                  <div class="profile-card">
+                    <div class="avatar big">{{ u.name.charAt(0).toUpperCase() }}</div>
+                    <div class="profile-details">
+                      <strong>{{ u.name }}</strong>
+                      <span class="email">{{ u.email }}</span>
+                      <div class="roles">
+                        <span class="badge">{{ auth.isAdmin() ? 'Administrator' : 'Workspace Member' }}</span>
+                        <span class="badge plan-badge">{{ settings.plan() === 'pro' ? 'Pro Member' : 'Free Tier' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="section upgrade-cta-section">
+                  <div class="upgrade-banner">
+                    <div class="banner-text">
+                      <strong>{{ settings.plan() === 'pro' ? 'You are on Synora Pro' : 'Upgrade to Synora Pro' }}</strong>
+                      <p>
+                        {{ settings.plan() === 'pro'
+                          ? 'Enjoy unlimited agent steps, priority Claude 3.5 Sonnet & Opus models, and 10GB Chroma vector memory.'
+                          : 'Get unlimited multi-tool reasoning runs, live web browsing, and custom sandboxes.'
+                        }}
+                      </p>
+                    </div>
+                    @if (settings.plan() !== 'pro') {
+                      <button type="button" class="btn upgrade-btn" (click)="requestUpgrade()">
+                        <svg lucideIcon="crown" size="16"></svg>
+                        Upgrade Plan
+                      </button>
+                    }
+                  </div>
+                </section>
+
+                <section class="section danger-zone">
+                  <h4 class="section-title text-err">Session Controls</h4>
+                  <p class="section-sub">Sign out from your current device.</p>
+                  <button type="button" class="btn danger" (click)="close(); auth.logout()">
+                    <svg lucideIcon="log-out" size="15"></svg>
+                    Sign Out of Synora
+                  </button>
+                </section>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <button type="button" class="btn close-btn" (click)="close()">
+          Close
+        </button>
+      </footer>
+    </div>
+  </div>
+}

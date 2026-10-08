@@ -1,5 +1,5 @@
 import { JsonPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 
 import { ChatMessage, ToolPart } from '../../../core/models/chat.models';
 import { ChatStore } from '../../../core/services/chat-store';
@@ -11,7 +11,6 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
   imports: [MarkdownPipe, JsonPipe],
   templateUrl: './message.html',
   styleUrl: './message.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Message {
   readonly message = input.required<ChatMessage>();

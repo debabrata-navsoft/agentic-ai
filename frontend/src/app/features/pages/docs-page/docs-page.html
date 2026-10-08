@@ -1,0 +1,141 @@
+<div class="page-container">
+  <!-- Topbar -->
+  <header class="page-topbar">
+    <div class="topbar-left">
+      <div class="page-icon">
+        <svg lucideIcon="file-text" size="20"></svg>
+      </div>
+      <div>
+        <h2 class="page-title">Knowledge Base & RAG Documents</h2>
+        <p class="page-sub">Documents are chunked and embedded in Chroma vector DB for contextual grounding.</p>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button type="button" class="btn back-btn" (click)="backToChat()">
+        <svg lucideIcon="message-square-text" size="15"></svg>
+        <span>Back to Chat</span>
+      </button>
+      <label class="btn primary upload-action">
+        <input type="file" multiple [accept]="accept()" (change)="onFilesPicked($event)" hidden />
+        <svg lucideIcon="upload" size="15"></svg>
+        <span>Upload Documents</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main class="page-body">
+    <!-- Stats Banner -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-num">{{ store.documents().length }}</span>
+        <span class="stat-lbl">Indexed Documents</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{{ totalChunks() }}</span>
+        <span class="stat-lbl">Vector Chunks</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{{ totalSize() }}</span>
+        <span class="stat-lbl">Total Knowledge Size</span>
+      </div>
+      <div class="stat-card formats">
+        <span class="formats-title">Supported Extensions:</span>
+        <div class="formats-list">
+          @for (type of store.supportedTypes(); track type) {
+            <span class="format-pill">{{ type }}</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Drag & Drop Zone -->
+    <label
+      class="upload-dropzone"
+      [class.drag-over]="dragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="dragging.set(false)"
+      (drop)="onDrop($event)"
+    >
+      <input type="file" multiple [accept]="accept()" (change)="onFilesPicked($event)" hidden />
+      @if (store.uploading(); as name) {
+        <div class="upload-state uploading">
+          <div class="spinner"></div>
+          <strong>Embedding {{ name }} into Chroma Vector DB…</strong>
+          <span>Extracting text chunks and generating vector embeddings</span>
+        </div>
+      } @else {
+        <div class="upload-state">
+          <div class="dropzone-icon">
+            <svg lucideIcon="upload" size="24"></svg>
+          </div>
+          <strong>Drop documents here or click to browse</strong>
+          <span>Supports PDF, Markdown (.md), text (.txt), code (.py, .ts, .json)</span>
+        </div>
+      }
+    </label>
+
+    @if (store.uploadError(); as err) {
+      <div class="error-banner">
+        <span>{{ err }}</span>
+      </div>
+    }
+
+    <!-- Search Filter Bar -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <svg lucideIcon="search" size="16"></svg>
+        <input
+          type="text"
+          placeholder="Filter documents by filename…"
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+        @if (searchQuery()) {
+          <button class="clear-search" (click)="searchQuery.set('')">
+            <svg lucideIcon="x" size="14"></svg>
+          </button>
+        }
+      </div>
+      <span class="count-tag">{{ filteredDocuments().length }} of {{ store.documents().length }}</span>
+    </div>
+
+    <!-- Documents Grid -->
+    <div class="documents-grid">
+      @for (doc of filteredDocuments(); track doc.id) {
+        <div class="document-card">
+          <div class="doc-icon">
+            <svg lucideIcon="file-text" size="22"></svg>
+          </div>
+          <div class="doc-info">
+            <strong class="doc-name truncate" [title]="doc.name">{{ doc.name }}</strong>
+            <div class="doc-meta">
+              <span>{{ formatSize(doc.size) }}</span>
+              <span>•</span>
+              <span class="badge chunk-badge">{{ doc.chunks }} chunk{{ doc.chunks === 1 ? '' : 's' }}</span>
+              <span>•</span>
+              <span class="doc-date">{{ doc.created_at | slice:0:10 }}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="delete-btn"
+            title="Delete document from knowledge base"
+            (click)="store.deleteDocument(doc.id)"
+          >
+            <svg lucideIcon="trash" size="15"></svg>
+          </button>
+        </div>
+      } @empty {
+        <div class="empty-state">
+          <svg lucideIcon="file-search" size="36"></svg>
+          <h3>No documents found</h3>
+          <p>
+            {{ searchQuery() ? 'No documents match "' + searchQuery() + '".' : 'Upload your first document above to give Synora RAG superpowers.' }}
+          </p>
+        </div>
+      }
+    </div>
+  </main>
+</div>

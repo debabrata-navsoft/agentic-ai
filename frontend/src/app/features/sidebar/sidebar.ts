@@ -1,12 +1,14 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 import { SessionSummary } from '../../core/models/chat.models';
 import { AuthStore } from '../../core/services/auth-store';
 import { ChatStore } from '../../core/services/chat-store';
-import { UserAdmin } from '../admin/user-admin';
+import { SettingsStore } from '../../core/services/settings-store';
+import { SettingsModal } from '../modals/settings-modal/settings-modal';
+import { UpgradeModal } from '../modals/upgrade-modal/upgrade-modal';
 
-type Tab = 'chats' | 'knowledge' | 'memory' | 'tools' | 'users';
+type Tab = 'chat' | 'agents' | 'docs' | 'memory' | 'tools';
 interface TabDef {
   id: Tab;
   label: string;
@@ -16,38 +18,41 @@ interface TabDef {
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Left panel: conversations, RAG knowledge base, long-term memory, tool catalog, and (for admins) users. */
+/** Left panel: navigation, conversations history, and user profile account menu. */
 @Component({
   selector: 'app-sidebar',
-  imports: [LucideDynamicIcon, UserAdmin],
+  imports: [LucideDynamicIcon, SettingsModal, UpgradeModal],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
 })
 export class Sidebar {
   protected readonly store = inject(ChatStore);
   protected readonly auth = inject(AuthStore);
-  protected readonly tab = signal<Tab>('chats');
-  private readonly baseTabs: TabDef[] = [
-    { id: 'chats', label: 'Chats', icon: 'message-square-text' },
+  protected readonly settings = inject(SettingsStore);
+  private readonly hostRef = inject(ElementRef);
+
+  protected readonly menuOpen = signal(false);
+  protected readonly settingsOpen = signal(false);
+  protected readonly upgradeOpen = signal(false);
+  protected readonly tabs = computed<TabDef[]>(() => [
+    { id: 'chat', label: 'Chats', icon: 'message-square-text' },
+    { id: 'agents', label: 'AI Agents', icon: 'bot', count: () => 5 },
     {
-      id: 'knowledge',
+      id: 'docs',
       label: 'Docs',
       icon: 'file-text',
       count: () => this.store.documents().length,
     },
     { id: 'memory', label: 'Memory', icon: 'brain', count: () => this.store.notes().length },
     { id: 'tools', label: 'Tools', icon: 'wrench', count: () => this.store.tools().length },
-  ];
-  protected readonly tabs = computed<TabDef[]>(() =>
-    this.auth.isAdmin()
-      ? [...this.baseTabs, { id: 'users', label: 'Users', icon: 'users' }]
-      : this.baseTabs,
-  );
+  ]);
+
+  protected onNavClick(id: Tab) {
+    this.store.setActiveView(id);
+  }
   protected readonly initial = computed(
     () => this.auth.user()?.name.trim().charAt(0).toUpperCase() || '?',
   );
-  protected readonly dragging = signal(false);
-  protected readonly accept = computed(() => this.store.supportedTypes().join(','));
 
   /** Chats bucketed by last activity (sessions arrive newest first). */
   protected readonly chatGroups = computed(() => {
@@ -67,26 +72,29 @@ export class Sidebar {
     return [...groups].map(([label, sessions]) => ({ label, sessions }));
   });
 
-  protected onFilesPicked(ev: Event) {
-    const input = ev.target as HTMLInputElement;
-    this.store.upload(Array.from(input.files ?? []));
-    input.value = '';
+  protected toggleMenu(ev: MouseEvent) {
+    ev.stopPropagation();
+    this.menuOpen.update((v) => !v);
   }
 
-  protected onDrop(ev: DragEvent) {
-    ev.preventDefault();
-    this.dragging.set(false);
-    this.store.upload(Array.from(ev.dataTransfer?.files ?? []));
+  protected openSettings() {
+    this.menuOpen.set(false);
+    this.settingsOpen.set(true);
   }
 
-  protected onDragOver(ev: DragEvent) {
-    ev.preventDefault();
-    this.dragging.set(true);
+  protected openUpgrade() {
+    this.menuOpen.set(false);
+    this.upgradeOpen.set(true);
   }
 
-  protected formatSize(bytes: number) {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(ev: MouseEvent) {
+    if (!this.menuOpen()) return;
+    const target = ev.target as HTMLElement;
+    const accountEl = this.hostRef.nativeElement.querySelector('.account-wrapper');
+    if (accountEl && !accountEl.contains(target)) {
+      this.menuOpen.set(false);
+    }
   }
 }
+

@@ -35,7 +35,8 @@
     <div class="welcome">
       <div class="logo big">S</div>
       <h2>What should we work on?</h2>
-      <p>Synora plans, searches the web, calculates, remembers, and writes files, step by step.</p>
+      <p>Select a prompt type below or describe your task. Synora plans, searches the web, executes code, remembers facts, and queries your documents.</p>
+
       <div class="suggestions">
         @for (s of suggestions; track s.label) {
           <button (click)="submit(s.text)">
@@ -47,6 +48,7 @@
           </button>
         }
       </div>
+
       @if (store.tools().length) {
         <div class="tool-chips">
           @for (t of store.tools(); track t.name) {
@@ -65,47 +67,73 @@
 </section>
 
 <footer class="composer">
-  <div class="composer-box">
-    <div class="input-row">
-      <label class="attach" title="Add documents to your knowledge base">
-        <input type="file" multiple hidden [accept]="accept()" (change)="onAttach($event)" />
-        <svg lucideIcon="plus" size="18"></svg>
-      </label>
-      <textarea
-        rows="1"
-        placeholder="Message Synora…  (Enter to send, Shift+Enter for a new line)"
-        [value]="draft()"
-        (input)="onInput($event)"
-        (keydown)="onKeydown($event)"
-      ></textarea>
-      @if (store.running()) {
-        <button class="send stop" (click)="store.stop()" title="Stop" aria-label="Stop">
-          <svg lucideIcon="square" size="14"></svg>
-        </button>
-      } @else {
-        <button
-          class="send"
-          (click)="submit()"
-          [disabled]="!draft().trim()"
-          title="Send"
-          aria-label="Send"
-        >
-          <svg lucideIcon="arrow-up" size="18"></svg>
-        </button>
-      }
+  <div class="composer-container">
+    <!-- Prompt Types Selector Bar -->
+    <div class="prompt-types-bar">
+      <span class="bar-label">Prompt Mode:</span>
+      <div class="chips-scroll">
+        @for (pt of promptTypes; track pt.id) {
+          <button
+            type="button"
+            class="prompt-type-chip"
+            [class.active]="selectedPromptType() === pt.id"
+            (click)="selectPromptType(pt.id)"
+          >
+            <svg [lucideIcon]="pt.icon" size="13"></svg>
+            <span>{{ pt.label }}</span>
+          </button>
+        }
+      </div>
     </div>
-    <div class="meta-row">
-      @if (store.uploading(); as name) {
-        <span class="chip">Indexing {{ name }}…</span>
-      }
-      <span class="tokens">≈ {{ draftTokens() }} tokens</span>
+
+    <!-- Composer Input Box -->
+    <div class="composer-box">
+      <div class="input-row">
+        <label class="attach" title="Add documents to your knowledge base">
+          <input type="file" multiple hidden [accept]="accept()" (change)="onAttach($event)" />
+          <svg lucideIcon="plus" size="18"></svg>
+        </label>
+        <textarea
+          #textarea
+          rows="1"
+          [placeholder]="currentPlaceholder()"
+          [value]="draft()"
+          (input)="onInput($event)"
+          (keydown)="onKeydown($event)"
+        ></textarea>
+        @if (store.running()) {
+          <button class="send stop" (click)="store.stop()" title="Stop" aria-label="Stop">
+            <svg lucideIcon="square" size="14"></svg>
+          </button>
+        } @else {
+          <button
+            class="send"
+            (click)="submit()"
+            [disabled]="!draft().trim()"
+            title="Send (Enter)"
+            aria-label="Send"
+          >
+            <svg lucideIcon="arrow-up" size="18"></svg>
+          </button>
+        }
+      </div>
+      <div class="meta-row">
+        <div class="active-mode-indicator">
+          <span class="mode-dot"></span>
+          <span>Mode: <strong>{{ activePromptType().label }}</strong></span>
+        </div>
+        @if (store.uploading(); as name) {
+          <span class="chip">Indexing {{ name }}…</span>
+        }
+        <span class="tokens">≈ {{ draftTokens() }} tokens</span>
+      </div>
     </div>
+    @if (store.uploadError(); as err) {
+      <p class="hint error">{{ err }}</p>
+    } @else {
+      <p class="hint">
+        Shift + Enter for new line • Enter to send • Agentic multi-tool loop
+      </p>
+    }
   </div>
-  @if (store.uploadError(); as err) {
-    <p class="hint error">{{ err }}</p>
-  } @else {
-    <p class="hint">
-      Synora can search the web, run tools and write files. Check important results.
-    </p>
-  }
 </footer>

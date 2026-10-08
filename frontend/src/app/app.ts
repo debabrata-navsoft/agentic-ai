@@ -4,18 +4,22 @@ import { AuthStore } from './core/services/auth-store';
 import { ChatStore } from './core/services/chat-store';
 import { AuthPage } from './features/auth/auth-page';
 import { ChatPanel } from './features/chat/chat-panel/chat-panel';
+import { AgentsPage } from './features/pages/agents-page/agents-page';
+import { DocsPage } from './features/pages/docs-page/docs-page';
+import { MemoryPage } from './features/pages/memory-page/memory-page';
+import { ToolsPage } from './features/pages/tools-page/tools-page';
 import { Sidebar } from './features/sidebar/sidebar';
 
 @Component({
   selector: 'app-root',
-  imports: [AuthPage, Sidebar, ChatPanel],
+  imports: [AuthPage, Sidebar, ChatPanel, AgentsPage, DocsPage, MemoryPage, ToolsPage],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: { '[class.signed-in]': 'auth.user()' },
 })
 export class App implements OnInit {
   protected readonly auth = inject(AuthStore);
-  private readonly store = inject(ChatStore);
+  protected readonly store = inject(ChatStore);
   private readonly userId = computed(() => this.auth.user()?.id);
 
   constructor() {

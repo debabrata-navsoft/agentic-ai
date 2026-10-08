@@ -16,12 +16,15 @@ import { reduceEvent } from '../utils/reduce-event';
 
 const NOTE_TOOLS = new Set(['save_note', 'delete_note']);
 
+export type ActiveView = 'chat' | 'agents' | 'docs' | 'memory' | 'tools';
+
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly api = inject(AgentApi);
   private readonly auth = inject(AuthStore);
   private abort: AbortController | null = null;
 
+  readonly activeView = signal<ActiveView>('chat');
   readonly sessions = signal<SessionSummary[]>([]);
   readonly currentId = signal<string | null>(null);
   readonly messages = signal<ChatMessage[]>([]);
@@ -110,13 +113,19 @@ export class ChatStore {
     this.documents.update((l) => l.filter((d) => d.id !== id));
   }
 
+  setActiveView(view: ActiveView) {
+    this.activeView.set(view);
+  }
+
   newChat() {
+    this.activeView.set('chat');
     if (this.running()) return;
     this.currentId.set(null);
     this.messages.set([]);
   }
 
   async open(id: string) {
+    this.activeView.set('chat');
     if (this.running() || id === this.currentId()) return;
     const session = await this.api.session(id);
     this.currentId.set(id);

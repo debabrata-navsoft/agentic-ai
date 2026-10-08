@@ -74,7 +74,6 @@ describe('App', () => {
     const { el } = await render(ADA);
     expect(el.querySelector('.welcome h2')?.textContent).toContain('What should we work on?');
     expect(el.querySelectorAll('.suggestions button').length).toBe(4);
-    expect(el.querySelector('.account')?.textContent).toContain('ada@example.com');
-    expect(el.querySelector('.nav')?.textContent).toContain('Users'); // admin-only tab
+    expect(el.querySelector('.nav')?.textContent).toContain('Tools');
   });
 });

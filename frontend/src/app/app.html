@@ -1,7 +1,23 @@
 @if (auth.ready()) {
   @if (auth.user()) {
     <app-sidebar />
-    <app-chat-panel />
+    @switch (store.activeView()) {
+      @case ('chat') {
+        <app-chat-panel />
+      }
+      @case ('agents') {
+        <app-agents-page />
+      }
+      @case ('docs') {
+        <app-docs-page />
+      }
+      @case ('memory') {
+        <app-memory-page />
+      }
+      @case ('tools') {
+        <app-tools-page />
+      }
+    }
   } @else {
     <app-auth-page />
   }

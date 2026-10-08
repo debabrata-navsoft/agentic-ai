@@ -1,0 +1,122 @@
+<div class="page-container">
+  <!-- Topbar -->
+  <header class="page-topbar">
+    <div class="topbar-left">
+      <div class="page-icon">
+        <svg lucideIcon="wrench" size="20"></svg>
+      </div>
+      <div>
+        <h2 class="page-title">Agent Tools & Capabilities</h2>
+        <p class="page-sub">Deterministic tools callable by the Claude autonomous agent during multi-turn loops.</p>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button type="button" class="btn back-btn" (click)="backToChat()">
+        <svg lucideIcon="message-square-text" size="15"></svg>
+        <span>Back to Chat</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Body Content -->
+  <main class="page-body">
+    <!-- Info Banner -->
+    <div class="tools-info-banner">
+      <div class="info-icon">
+        <svg lucideIcon="zap" size="18"></svg>
+      </div>
+      <div class="info-text">
+        <strong>Autonomous Multi-Tool Loop</strong>
+        <p>Synora's agent loop executes tools iteratively until your prompt is solved. Tool inputs and execution traces are streamed live in the chat timeline with step verification.</p>
+      </div>
+    </div>
+
+    <!-- Search & Type Filter Bar -->
+    <div class="tools-controls-row">
+      <div class="search-box">
+        <svg lucideIcon="search" size="16"></svg>
+        <input
+          type="text"
+          placeholder="Filter tools by name or description…"
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+        @if (searchQuery()) {
+          <button class="clear-search" (click)="searchQuery.set('')">
+            <svg lucideIcon="x" size="14"></svg>
+          </button>
+        }
+      </div>
+
+      <div class="filter-pills">
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="filterType() === 'all'"
+          (click)="filterType.set('all')"
+        >
+          All ({{ store.tools().length }})
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="filterType() === 'local'"
+          (click)="filterType.set('local')"
+        >
+          Local Sandboxed ({{ localCount() }})
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="filterType() === 'hosted'"
+          (click)="filterType.set('hosted')"
+        >
+          Hosted Services ({{ hostedCount() }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Tools Grid -->
+    <div class="tools-grid">
+      @for (tool of filteredTools(); track tool.name) {
+        <div class="tool-card">
+          <div class="tool-card-head">
+            <div class="tool-head-left">
+              <div class="tool-icon">
+                <svg [lucideIcon]="getToolIcon(tool.name)" size="18"></svg>
+              </div>
+              <div>
+                <strong class="tool-label">{{ tool.label }}</strong>
+                <span class="tool-name">{{ tool.name }}</span>
+              </div>
+            </div>
+            @if (tool.server) {
+              <span class="badge hosted-badge">Hosted</span>
+            } @else {
+              <span class="badge local-badge">Built-in</span>
+            }
+          </div>
+
+          <p class="tool-desc">{{ tool.description }}</p>
+
+          <div class="tool-card-foot">
+            <span class="tool-status">
+              <span class="dot"></span> Active in Agent Loop
+            </span>
+            <button type="button" class="btn use-tool-btn" (click)="tryTool(tool)">
+              <span>Use in Chat</span>
+              <svg lucideIcon="chevron-right" size="13"></svg>
+            </button>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">
+          <svg lucideIcon="wrench" size="38"></svg>
+          <h3>No tools found</h3>
+          <p>No agent tools match your search criteria.</p>
+        </div>
+      }
+    </div>
+  </main>
+</div>

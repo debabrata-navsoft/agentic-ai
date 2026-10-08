@@ -1,0 +1,163 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="onBackdropClick($event)">
+    <div class="upgrade-dialog">
+      <button class="dialog-close" (click)="close()" aria-label="Close dialog">
+        <svg lucideIcon="x" size="18"></svg>
+      </button>
+
+      <div class="upgrade-header">
+        <div class="crown-badge">
+          <svg lucideIcon="crown" size="26"></svg>
+        </div>
+        <h2>Supercharge Your Workspace</h2>
+        <p class="subtitle">
+          Unlock unlimited multi-tool autonomous agents, deeper Claude 3 Opus reasoning, and expansive vector memory.
+        </p>
+
+        <!-- Billing Cycle Toggle -->
+        <div class="cycle-toggle">
+          <button
+            type="button"
+            [class.active]="billingCycle() === 'monthly'"
+            (click)="billingCycle.set('monthly')"
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            [class.active]="billingCycle() === 'yearly'"
+            (click)="billingCycle.set('yearly')"
+          >
+            Yearly
+            <span class="save-badge">Save 20%</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pricing Cards Comparison -->
+      <div class="plans-grid">
+        <!-- Free Plan -->
+        <div class="plan-card">
+          <div class="plan-top">
+            <span class="plan-name">Free Workspace</span>
+            <div class="plan-price">
+              <span class="amount">$0</span>
+              <span class="period">/ month</span>
+            </div>
+            <p class="plan-desc">Standard access for basic agent interactions and local testing.</p>
+          </div>
+
+          <ul class="features-list">
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>25 Agent multi-tool runs / day</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Standard Claude 3.5 Sonnet model</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>100 MB Chroma vector RAG documents</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>50 Long-term memory notes</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Community support</span>
+            </li>
+          </ul>
+
+          <div class="plan-action">
+            <button type="button" class="btn disabled-btn" disabled>
+              {{ settings.plan() === 'free' ? 'Current Plan' : 'Free Tier' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="plan-card pro-card">
+          <div class="popular-ribbon">Most Popular</div>
+          <div class="plan-top">
+            <div class="pro-title-row">
+              <span class="plan-name pro-text">Synora Pro</span>
+              <span class="badge pro-badge">Pro Tier</span>
+            </div>
+            <div class="plan-price">
+              <span class="amount">{{ billingCycle() === 'yearly' ? '$16' : '$20' }}</span>
+              <span class="period">/ month</span>
+            </div>
+            <p class="plan-desc">
+              {{ billingCycle() === 'yearly' ? 'Billed annually ($192/year)' : 'Billed monthly' }}
+            </p>
+          </div>
+
+          <ul class="features-list">
+            <li class="highlight">
+              <svg lucideIcon="check" size="14"></svg>
+              <strong>Unlimited autonomous agent loops</strong>
+            </li>
+            <li class="highlight">
+              <svg lucideIcon="check" size="14"></svg>
+              <strong>Claude 3.5 Sonnet & Claude 3 Opus maximum effort</strong>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>10 GB Chroma vector RAG documents</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Unlimited persistent cross-session memories</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Real-time live web search & webpage scraper</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Python execution & terminal sandbox tools</span>
+            </li>
+            <li>
+              <svg lucideIcon="check" size="14"></svg>
+              <span>Dedicated low-latency compute runtime</span>
+            </li>
+          </ul>
+
+          <div class="plan-action">
+            @if (isSuccess()) {
+              <div class="success-box">
+                <svg lucideIcon="check" size="18"></svg>
+                <span>Upgraded to Pro! Enjoy unlimited agents.</span>
+              </div>
+            } @else if (settings.plan() === 'pro') {
+              <button type="button" class="btn active-pro" disabled>
+                ✓ Current Active Plan
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn pro-cta-btn"
+                [disabled]="isUpgrading()"
+                (click)="confirmUpgrade()"
+              >
+                @if (isUpgrading()) {
+                  <span>Activating Pro Plan…</span>
+                } @else {
+                  <svg lucideIcon="crown" size="16"></svg>
+                  <span>Upgrade to Synora Pro</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="guarantee-footer">
+        <svg lucideIcon="shield" size="14"></svg>
+        <span>30-day money-back satisfaction guarantee • Cancel or modify anytime</span>
+      </div>
+    </div>
+  </div>
+}

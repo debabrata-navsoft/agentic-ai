@@ -1,0 +1,131 @@
+<div class="page-container">
+  <!-- Topbar -->
+  <header class="page-topbar">
+    <div class="topbar-left">
+      <div class="page-icon">
+        <svg lucideIcon="bot" size="20"></svg>
+      </div>
+      <div>
+        <h2 class="page-title">AI Agents & Autonomous Assistants</h2>
+        <p class="page-sub">Specialized autonomous agents configured with customized tool permissions and system prompts.</p>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button type="button" class="btn back-btn" (click)="backToChat()">
+        <svg lucideIcon="message-square-text" size="15"></svg>
+        <span>Back to Chat</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Body Content -->
+  <main class="page-body">
+    <!-- Header Summary Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-num">{{ agents.length }}</span>
+        <span class="stat-lbl">Active Agents</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">Claude 3.5</span>
+        <span class="stat-lbl">Underlying LLM Engine</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">Multi-Tool</span>
+        <span class="stat-lbl">Autonomous Loop Enabled</span>
+      </div>
+      <div class="stat-card ready-stat">
+        <span class="status-ready"><span class="dot"></span> All Agents Online</span>
+        <span class="stat-lbl">Runtime connected & ready</span>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="filter-row">
+      <div class="search-box">
+        <svg lucideIcon="search" size="16"></svg>
+        <input
+          type="text"
+          placeholder="Filter agents by name, role, or capabilities…"
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+        @if (searchQuery()) {
+          <button class="clear-search" (click)="searchQuery.set('')">
+            <svg lucideIcon="x" size="14"></svg>
+          </button>
+        }
+      </div>
+      <span class="count-tag">{{ filteredAgents().length }} of {{ agents.length }} Agents</span>
+    </div>
+
+    <!-- Agents Grid -->
+    <div class="agents-grid">
+      @for (agent of filteredAgents(); track agent.id) {
+        <div class="agent-card">
+          <!-- Card Header -->
+          <div class="agent-card-head">
+            <div class="agent-avatar" [style.background]="agent.avatarGradient">
+              <svg [lucideIcon]="agent.icon" size="22"></svg>
+            </div>
+            <div class="agent-identity">
+              <div class="agent-name-row">
+                <strong class="agent-name">{{ agent.name }}</strong>
+                <span class="badge role-badge">{{ agent.role }}</span>
+              </div>
+              <span class="agent-engine">{{ agent.model }}</span>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <p class="agent-desc">{{ agent.description }}</p>
+
+          <!-- Capabilities -->
+          <div class="agent-section">
+            <span class="section-label">Core Capabilities:</span>
+            <div class="capabilities-list">
+              @for (cap of agent.capabilities; track cap) {
+                <span class="cap-pill">
+                  <svg lucideIcon="check" size="11"></svg>
+                  <span>{{ cap }}</span>
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Allowed Tools -->
+          <div class="agent-section">
+            <span class="section-label">Equipped Tools:</span>
+            <div class="tools-list">
+              @for (tool of agent.tools; track tool) {
+                <span class="tool-tag">{{ tool }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Card Footer & Launch Button -->
+          <div class="agent-card-foot">
+            <span class="status-indicator">
+              <span class="dot"></span> Ready
+            </span>
+            <button
+              type="button"
+              class="btn launch-agent-btn"
+              (click)="startChatWith(agent)"
+            >
+              <span>Chat with {{ agent.name }}</span>
+              <svg lucideIcon="chevron-right" size="14"></svg>
+            </button>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">
+          <svg lucideIcon="bot" size="38"></svg>
+          <h3>No agents match your search</h3>
+          <p>Try searching with another keyword or clear the search input.</p>
+        </div>
+      }
+    </div>
+  </main>
+</div>

@@ -12,7 +12,7 @@
 
 <nav class="nav">
   @for (t of tabs(); track t.id) {
-    <button [class.active]="tab() === t.id" (click)="tab.set(t.id)">
+    <button [class.active]="store.activeView() === t.id" (click)="onNavClick(t.id)">
       <svg [lucideIcon]="t.icon" size="16"></svg>
       <span class="nav-label">{{ t.label }}</span>
       @if (t.count) {
@@ -23,125 +23,106 @@
 </nav>
 
 <div class="list">
-  @switch (tab()) {
-    @case ('chats') {
-      @for (g of chatGroups(); track g.label) {
-        <div class="mono-label group">{{ g.label }}</div>
-        @for (s of g.sessions; track s.id) {
-          <div class="item" [class.active]="s.id === store.currentId()" (click)="store.open(s.id)">
-            <svg lucideIcon="message-square-text" size="14"></svg>
-            <span class="item-title truncate">{{ s.title }}</span>
-            <button
-              class="icon"
-              title="Delete chat"
-              (click)="$event.stopPropagation(); store.deleteSession(s.id)"
-            >
-              <svg lucideIcon="trash" size="13"></svg>
-            </button>
-          </div>
-        }
-      } @empty {
-        <p class="empty">No conversations yet.</p>
-      }
-    }
-    @case ('knowledge') {
-      <label
-        class="dropzone"
-        [class.over]="dragging()"
-        (dragover)="onDragOver($event)"
-        (dragleave)="dragging.set(false)"
-        (drop)="onDrop($event)"
+  @for (g of chatGroups(); track g.label) {
+    <div class="mono-label group">{{ g.label }}</div>
+    @for (s of g.sessions; track s.id) {
+      <div
+        class="item"
+        [class.active]="store.activeView() === 'chat' && s.id === store.currentId()"
+        (click)="store.open(s.id)"
       >
-        <input type="file" multiple [accept]="accept()" (change)="onFilesPicked($event)" hidden />
-        @if (store.uploading(); as name) {
-          <span>Indexing {{ name }}…</span>
-        } @else {
-          <svg lucideIcon="upload" size="18"></svg>
-          <strong>Upload documents</strong>
-          <span
-            >Drop PDF, Markdown, text or code files. Synora searches them to answer questions
-            (RAG).</span
-          >
-        }
-      </label>
-      @if (store.uploadError(); as err) {
-        <p class="upload-error">{{ err }}</p>
-      }
-      @for (d of store.documents(); track d.id) {
-        <div class="card">
-          <div class="card-head">
-            <strong class="truncate">{{ d.name }}</strong>
-            <button
-              class="icon"
-              title="Remove from knowledge base"
-              (click)="store.deleteDocument(d.id)"
-            >
-              <svg lucideIcon="trash" size="13"></svg>
-            </button>
-          </div>
-          <p>{{ formatSize(d.size) }} · {{ d.chunks }} chunk{{ d.chunks === 1 ? '' : 's' }}</p>
-        </div>
-      } @empty {
-        @if (!store.uploading()) {
-          <p class="empty">No documents yet.</p>
-        }
-      }
+        <svg lucideIcon="message-square-text" size="14"></svg>
+        <span class="item-title truncate">{{ s.title }}</span>
+        <button
+          class="icon"
+          title="Delete chat"
+          (click)="$event.stopPropagation(); store.deleteSession(s.id)"
+        >
+          <svg lucideIcon="trash" size="13"></svg>
+        </button>
+      </div>
     }
-    @case ('memory') {
-      @for (n of store.notes(); track n.id) {
-        <div class="card">
-          <div class="card-head">
-            <strong>{{ n.title }}</strong>
-            <button class="icon" title="Forget" (click)="store.deleteNote(n.id)">
-              <svg lucideIcon="trash" size="13"></svg>
-            </button>
-          </div>
-          <p>{{ n.content }}</p>
-          @if (n.tags.length) {
-            <div class="tags">
-              @for (t of n.tags; track t) {
-                <span>#{{ t }}</span>
-              }
-            </div>
-          }
-        </div>
-      } @empty {
-        <p class="empty">Nothing remembered yet. Ask Synora to remember something.</p>
-      }
-    }
-    @case ('tools') {
-      @for (t of store.tools(); track t.name) {
-        <div class="card">
-          <div class="card-head">
-            <strong>{{ t.label }}</strong>
-            @if (t.server) {
-              <span class="badge">hosted</span>
-            }
-          </div>
-          <p>{{ t.description }}</p>
-        </div>
-      }
-    }
-    @case ('users') {
-      <app-user-admin />
-    }
+  } @empty {
+    <p class="empty">No conversations yet.</p>
   }
 </div>
 
 <footer class="foot">
-  @if (store.health(); as h) {
-    <div class="status"><span class="dot"></span>Connected: {{ h.model }}</div>
-  }
   @if (auth.user(); as u) {
-    <div class="account">
-      <div class="avatar">{{ initial() }}</div>
-      <div class="who">
-        <div class="truncate name">{{ u.name }}</div>
-        <div class="truncate sub">{{ auth.isAdmin() ? 'Admin' : 'Workspace' }} · {{ u.email }}</div>
+    <div class="account-wrapper">
+      @if (menuOpen()) {
+        <div class="account-menu">
+          <div class="menu-user-header">
+            <div class="avatar">{{ initial() }}</div>
+            <div class="menu-user-info">
+              <div class="truncate menu-name">{{ u.name }}</div>
+              <div class="truncate menu-email">{{ u.email }}</div>
+            </div>
+            <span class="badge plan-pill" [class.pro]="settings.plan() === 'pro'">
+              {{ settings.plan() === 'pro' ? 'PRO' : 'FREE' }}
+            </span>
+          </div>
+
+          <div class="menu-divider"></div>
+
+          <button type="button" class="menu-item upgrade-item" (click)="openUpgrade()">
+            <div class="menu-icon crown">
+              <svg lucideIcon="crown" size="15"></svg>
+            </div>
+            <div class="menu-text">
+              <span class="menu-title">Upgrade Plan</span>
+              <span class="menu-desc">Unlimited models & RAG memory</span>
+            </div>
+            @if (settings.plan() !== 'pro') {
+              <span class="badge save-tag">Save 20%</span>
+            }
+          </button>
+
+          <button type="button" class="menu-item" (click)="openSettings()">
+            <div class="menu-icon">
+              <svg lucideIcon="settings" size="15"></svg>
+            </div>
+            <div class="menu-text">
+              <span class="menu-title">Settings</span>
+              <span class="menu-desc">Theme, AI model, shortcuts & data</span>
+            </div>
+          </button>
+
+          <div class="menu-divider"></div>
+
+          <button type="button" class="menu-item logout-item" (click)="auth.logout()">
+            <div class="menu-icon danger">
+              <svg lucideIcon="log-out" size="15"></svg>
+            </div>
+            <div class="menu-text">
+              <span class="menu-title text-err">Sign Out</span>
+            </div>
+          </button>
+        </div>
+      }
+
+      <div class="account" [class.menu-active]="menuOpen()" (click)="toggleMenu($event)">
+        <div class="avatar">{{ initial() }}</div>
+        <div class="who">
+          <div class="truncate name">{{ u.name }}</div>
+          <div class="truncate sub">{{ auth.isAdmin() ? 'Admin' : 'Workspace' }} · {{ u.email }}</div>
+        </div>
+        <div class="menu-trigger" title="Open user menu">
+          <svg [lucideIcon]="menuOpen() ? 'chevron-down' : 'chevron-up'" size="16"></svg>
+        </div>
       </div>
-      <button class="sign-out" title="Sign out" aria-label="Sign out" (click)="auth.logout()">
-        <svg lucideIcon="log-out" size="16"></svg>
-      </button>
     </div>
   }
 </footer>
+
+<app-settings-modal
+  [isOpen]="settingsOpen()"
+  (closed)="settingsOpen.set(false)"
+  (openUpgrade)="openUpgrade()"
+/>
+
+<app-upgrade-modal
+  [isOpen]="upgradeOpen()"
+  (closed)="upgradeOpen.set(false)"
+/>
+
