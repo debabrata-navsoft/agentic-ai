@@ -267,7 +267,7 @@
 }
 
 .pro-cta-btn {
-  background: linear-gradient(135deg, var(--accent), #ec4899);
+  background: linear-gradient(135deg, #f59e0b, #ec4899);
   color: #fff;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 45%, transparent);
 }

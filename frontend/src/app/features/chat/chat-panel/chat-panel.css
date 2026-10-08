@@ -281,7 +281,7 @@
 }
 
 .prompt-type-chip.active {
-  color: #fff;
+  color: var(--on-accent);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, black), var(--accent));
   border-color: var(--accent-2);
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
@@ -390,7 +390,7 @@ textarea::placeholder {
 }
 
 .send {
-  color: #fff;
+  color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 

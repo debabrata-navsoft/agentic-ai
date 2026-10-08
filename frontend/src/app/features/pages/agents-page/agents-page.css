@@ -335,7 +335,7 @@
 }
 .launch-agent-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 

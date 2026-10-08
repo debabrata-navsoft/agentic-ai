@@ -26,7 +26,7 @@ export class SettingsModal {
   protected readonly cacheCleared = signal(false);
 
   protected readonly accents: { id: AccentColor; label: string; color: string }[] = [
-    { id: 'violet', label: 'Violet', color: '#8b5cf6' },
+    { id: 'mono', label: 'Mono', color: 'var(--text)' },
     { id: 'blue', label: 'Blue', color: '#2563eb' },
     { id: 'emerald', label: 'Emerald', color: '#059669' },
     { id: 'amber', label: 'Amber', color: '#d97706' },

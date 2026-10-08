@@ -173,7 +173,7 @@ input:focus {
   border: 0;
   border-radius: 10px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 .primary:hover:not(:disabled) {
@@ -183,8 +183,8 @@ input:focus {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid #fff6;
-  border-top-color: #fff;
+  border: 2px solid color-mix(in srgb, var(--on-accent) 40%, transparent);
+  border-top-color: var(--on-accent);
   animation: spin 0.8s linear infinite;
 }
 

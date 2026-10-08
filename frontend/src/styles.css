@@ -1,14 +1,17 @@
 /* Global theme and shared rules. Component-specific styles live next to each component. */
 
 :root {
-  --bg: #0c0e13;
-  --panel: #13161d;
-  --panel-2: #1a1e27;
-  --border: #262b36;
-  --text: #e8e9ee;
-  --muted: #8a91a2;
-  --accent: #8b5cf6;
-  --accent-2: #c084fc;
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --panel-2: #161616;
+  --border: #262626;
+  --text: #ffffff;
+  --muted: #a3a3a3;
+  /* Default (Mono) accent: white on the dark theme, black on the light one. */
+  --accent: #ffffff;
+  --accent-2: #d4d4d4;
+  /* Text and icons drawn on top of the accent color. */
+  --on-accent: #000000;
   --ok: #34d399;
   --warn: #fbbf24;
   --err: #f87171;
@@ -18,18 +21,21 @@
 }
 
 [data-theme='light'] {
-  --bg: #f8fafc;
-  --panel: #ffffff;
-  --panel-2: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
+  --bg: #ffffff;
+  --panel: #fafafa;
+  --panel-2: #f0f0f0;
+  --border: #e0e0e0;
+  --text: #000000;
+  --muted: #555555;
+  --accent: #000000;
+  --accent-2: #404040;
+  --on-accent: #ffffff;
   color-scheme: light;
 }
 
-[data-accent='violet'] {
-  --accent: #8b5cf6;
-  --accent-2: #c084fc;
+/* Colored accents (picked in Settings) override Mono on both themes. */
+[data-accent]:not([data-accent='mono']) {
+  --on-accent: #ffffff;
 }
 [data-accent='blue'] {
   --accent: #2563eb;
@@ -48,77 +54,215 @@
   --accent-2: #fb7185;
 }
 
-[data-font='compact'] html, [data-font='compact'] body { font-size: 13.5px; }
-[data-font='normal'] html, [data-font='normal'] body { font-size: 15px; }
-[data-font='large'] html, [data-font='large'] body { font-size: 16.5px; }
+[data-font='compact'] html,
+[data-font='compact'] body {
+  font-size: 13.5px;
+}
+[data-font='normal'] html,
+[data-font='normal'] body {
+  font-size: 15px;
+}
+[data-font='large'] html,
+[data-font='large'] body {
+  font-size: 16.5px;
+}
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.6 'Plus Jakarta Sans', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font:
+    15px/1.6 'Plus Jakarta Sans',
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-button { font: inherit; color: inherit; cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: 0.5; }
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
-pre, code { font-family: var(--mono); font-size: 13px; }
+pre,
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+}
 
 /* Brand mark, shared by the sidebar, top bar, welcome screen, messages and auth page */
 .logo {
-  position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  font-weight: 800; color: #fff; flex-shrink: 0;
+  font-weight: 800;
+  color: var(--on-accent);
+  flex-shrink: 0;
 }
 .logo::after {
-  content: ''; position: absolute; top: 18%; right: 18%; width: 16%; height: 16%;
-  border-radius: 50%; background: #fff; opacity: 0.85;
+  content: '';
+  position: absolute;
+  top: 18%;
+  right: 18%;
+  width: 16%;
+  height: 16%;
+  border-radius: 50%;
+  background: var(--on-accent);
+  opacity: 0.85;
 }
-.logo.small { width: 28px; height: 28px; font-size: 13px; border-radius: 8px; }
+.logo.small {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  border-radius: 8px;
+}
 .logo.big {
-  width: 64px; height: 64px; font-size: 28px; border-radius: 18px; margin: 0 auto 18px;
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent),
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+  border-radius: 18px;
+  margin: 0 auto 18px;
+  box-shadow:
+    0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent),
     0 10px 50px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 /* Small monospace pill: status tags, tool chips, composer meta */
 .chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
-  font: 11px/1.4 var(--mono); color: var(--muted);
-  background: var(--panel-2); border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 11px/1.4 var(--mono);
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
 }
-.chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
-.mono-label { font: 500 11px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.mono-label {
+  font: 500 11px/1.4 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
 .avatar {
-  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 14px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: 14px;
 }
 
 /* Sidebar/admin list cards */
-.card { padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; }
-.card p { margin: 4px 0 0; color: var(--muted); white-space: pre-wrap; }
-.card-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-
-.badge {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px;
-  border-radius: 6px; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);
+.card {
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
 }
 
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Rendered Markdown is inserted via [innerHTML], which component-scoped styles can't reach. */
-.markdown > :first-child { margin-top: 0; }
-.markdown > :last-child { margin-bottom: 0; }
-.markdown a { color: var(--accent); }
-.markdown pre { background: var(--panel); border: 1px solid var(--border); padding: 12px; border-radius: 10px; overflow-x: auto; }
-.markdown :not(pre) > code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
-.markdown table { border-collapse: collapse; }
-.markdown th, .markdown td { border: 1px solid var(--border); padding: 6px 10px; }
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown a {
+  color: var(--accent);
+}
+.markdown pre {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.markdown :not(pre) > code {
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.markdown table {
+  border-collapse: collapse;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+}
 
-@keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

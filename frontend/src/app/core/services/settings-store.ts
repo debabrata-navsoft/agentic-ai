@@ -1,7 +1,8 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 
 export type AppTheme = 'dark' | 'light' | 'system';
-export type AccentColor = 'violet' | 'blue' | 'emerald' | 'amber' | 'rose';
+const ACCENTS = ['mono', 'blue', 'emerald', 'amber', 'rose'] as const;
+export type AccentColor = (typeof ACCENTS)[number];
 export type FontSize = 'compact' | 'normal' | 'large';
 export type PlanTier = 'free' | 'pro';
 
@@ -22,7 +23,7 @@ const STORAGE_KEY = 'synora_user_settings';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
-  accent: 'violet',
+  accent: 'mono',
   fontSize: 'normal',
   defaultPromptMode: 'auto',
   model: 'claude-3-5-sonnet',
@@ -36,7 +37,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 @Injectable({ providedIn: 'root' })
 export class SettingsStore {
   readonly theme = signal<AppTheme>('dark');
-  readonly accent = signal<AccentColor>('violet');
+  readonly accent = signal<AccentColor>('mono');
   readonly fontSize = signal<FontSize>('normal');
   readonly defaultPromptMode = signal<string>('auto');
   readonly model = signal<string>('claude-3-5-sonnet');
@@ -84,7 +85,8 @@ export class SettingsStore {
       if (!raw) return;
       const parsed: Partial<UserPreferences> = JSON.parse(raw);
       if (parsed.theme) this.theme.set(parsed.theme);
-      if (parsed.accent) this.accent.set(parsed.accent);
+      // A saved accent that no longer exists (e.g. the removed violet) falls back to Mono.
+      if (parsed.accent && ACCENTS.includes(parsed.accent)) this.accent.set(parsed.accent);
       if (parsed.fontSize) this.fontSize.set(parsed.fontSize);
       if (parsed.defaultPromptMode) this.defaultPromptMode.set(parsed.defaultPromptMode);
       if (parsed.model) this.model.set(parsed.model);
