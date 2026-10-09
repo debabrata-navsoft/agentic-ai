@@ -1,0 +1,94 @@
+<section class="card status">
+  @if (info(); as m) {
+    @if (m.loaded) {
+      <span class="dot ok"></span>
+      <span>
+        {{ m.params | number }} parameters · {{ m.config?.n_layer }} layers ·
+        {{ m.config?.block_size }}-char context · trained {{ m.step | number }} steps · val loss
+        {{ m.val_loss | number: '1.3-3' }}
+      </span>
+    } @else {
+      <span class="dot off"></span>
+      <span>No trained model. In <code>backend/</code> run <code>python -m app.train</code>.</span>
+    }
+    <button class="ghost" (click)="refresh(true)" [disabled]="running()">Reload model</button>
+  } @else if (!error()) {
+    <span>Loading…</span>
+  }
+</section>
+
+<section class="card">
+  <label for="prompt">Start the text and the model continues it</label>
+  <textarea
+    id="prompt"
+    rows="4"
+    [ngModel]="prompt()"
+    (ngModelChange)="prompt.set($event)"
+    [disabled]="running()"
+  ></textarea>
+
+  <div class="controls">
+    <label>
+      Length <strong>{{ maxTokens() }}</strong>
+      <input
+        type="range"
+        min="50"
+        max="2000"
+        step="50"
+        [ngModel]="maxTokens()"
+        (ngModelChange)="maxTokens.set(+$event)"
+      />
+    </label>
+    <label>
+      Temperature <strong>{{ temperature() }}</strong>
+      <input
+        type="range"
+        min="0.1"
+        max="2"
+        step="0.1"
+        [ngModel]="temperature()"
+        (ngModelChange)="temperature.set(+$event)"
+      />
+    </label>
+    <label>
+      Top-k
+      <input
+        type="number"
+        min="1"
+        placeholder="off"
+        [ngModel]="topK()"
+        (ngModelChange)="topK.set($event)"
+      />
+    </label>
+  </div>
+
+  <div class="actions">
+    @if (running()) {
+      <button (click)="stop()">Stop</button>
+    } @else {
+      <button (click)="generate()" [disabled]="!info()?.loaded">Generate</button>
+    }
+  </div>
+</section>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="notice">{{ notice() }}</p>
+}
+
+@if (output() || running()) {
+  <section class="card output">
+    <pre><span class="prompt-echo">{{ prompt() }}</span>{{ output() }}@if (running()) {<span class="cursor">▍</span>}</pre>
+  </section>
+}
+
+@if (info()?.loaded) {
+  <p class="hint">
+    This model only learned the character patterns of its training text (<code>{{
+      info()?.data
+    }}</code
+    >). It writes in that style but doesn't know facts or answer questions.
+  </p>
+}

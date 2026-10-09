@@ -1,151 +1,93 @@
-# Synora — Agentic AI Assistant
+# Synora AI
 
-A full-stack agentic AI app: a **FastAPI** backend runs a Claude-powered agent loop with tools,
-memory, and RAG, and an **Angular** frontend streams the agent's reasoning, tool calls, and answers live.
+My own AI, built from scratch and run on this computer. No pretrained weights, no third-party AI APIs.
+The web app has two pages:
 
-```
-Angular 21 (Chat UI)
-   │
-   │  HTTP (REST) / SSE (streaming)
-   ▼
-Python Backend
-   ├── FastAPI           app/api.py
-   ├── Agent             app/agent/loop.py      understand → choose tool → execute → observe → repeat
-   ├── LLM               Claude (claude-opus-5, adaptive thinking)
-   ├── Tools             app/tools/             web search/fetch, calculator, clock, files
-   ├── Memory            app/tools/memory.py    long-term notes shared across a user's chats
-   └── RAG               app/rag/               upload → chunk → embed → retrieve
-        ├── Database     SQLite                 sessions, notes, document metadata
-        └── Vector DB    ChromaDB               chunk embeddings (local all-MiniLM-L6-v2)
-```
-
-## Project layout
+- **Ask documents**: a chat-style search over your own files. Type a question and get an answer quoted
+  from the best-matching passages, with sources (`backend/app/search.py`).
+- **Write with my model**: a small GPT-style language model, trained here from random weights,
+  continues text you start (`backend/app/model.py`).
 
 ```
-agentic-ai/
-├── backend/                  Python · FastAPI · Anthropic SDK
-│   ├── app/
-│   │   ├── main.py           App factory, CORS, lifespan wiring
-│   │   ├── api.py            REST + SSE endpoints
-│   │   ├── config.py         Settings (AGENT_* env vars)
-│   │   ├── store.py          SQLite: sessions + long-term notes
-│   │   ├── transcript.py     API history → UI display shape
-│   │   ├── agent/
-│   │   │   ├── loop.py       Streaming agent loop (tool calls, pause_turn, refusals, fallbacks)
-│   │   │   └── prompts.py    System prompt
-│   │   ├── rag/
-│   │   │   ├── chunking.py   Text/PDF extraction, paragraph-aware chunking with overlap
-│   │   │   └── knowledge_base.py  ChromaDB vector store: add, search, delete
-│   │   └── tools/
-│   │       ├── base.py       Tool framework (Pydantic-validated inputs)
-│   │       ├── utility.py    calculator, get_current_time
-│   │       ├── memory.py     save_note, search_notes, delete_note
-│   │       ├── knowledge.py  search_knowledge_base, list_documents (RAG retrieval)
-│   │       └── files.py      list_files, read_file, write_file (sandboxed workspace)
-│   └── tests/
-└── frontend/                 Angular 21 · signals · standalone components
-    └── src/app/
-        ├── core/
-        │   ├── models/       chat.models.ts — shared types
-        │   ├── services/     agent-api.ts (HTTP + SSE), chat-store.ts (signal state)
-        │   └── utils/        reduce-event.ts — stream event → message reducer
-        ├── shared/pipes/     markdown.pipe.ts
-        └── features/
-            ├── sidebar/      Chats · Docs (upload) · Memory · Tools panel
-            └── chat/
-                ├── chat-panel/   Thread, welcome screen, composer
-                └── message/      One message: text, reasoning, tool cards
+backend/    FastAPI server, document search (app/search.py), the model (app/model.py), training (app/train.py)
+frontend/   Angular 21 web app that streams text from the backend
+lessons/    step-by-step learning scripts (l01_..., l02_...)
+data/       training text (not committed)
 ```
 
-## How the agent works
+## What it is (and isn't)
 
-1. The user's message is appended to the session history and sent to Claude (`claude-opus-5`,
-   adaptive thinking) with the tool definitions.
-2. The response streams back; text, reasoning summaries, and tool activity are forwarded to the
-   browser as Server-Sent Events.
-3. If Claude requests tools, the backend validates inputs, runs them concurrently, and sends the
-   results back. This repeats until Claude answers without calling tools (capped at
-   `AGENT_MAX_ITERATIONS`).
-4. The full history (including thinking and tool blocks) is saved to SQLite so a conversation
-   can be resumed later.
+Ask documents:
 
-**Tools:** web search and web fetch (run by Anthropic's servers), calculator, clock, long-term memory
-shared across chats, RAG search over uploaded documents, and file read/write confined to
-`backend/workspace/`.
+- Uploaded `.txt`, `.md` and `.pdf` files go in `backend/data/docs/`, are split into ~800-character
+  passages, and are ranked with BM25 (word matches weighted by how rare each word is).
+- The answer is the best-matching sentences **quoted** from your documents. It can only find what's in
+  them, and doesn't write new text or reason the way ChatGPT does.
+- Files copied into `backend/data/docs/` by hand are picked up automatically on the next search.
 
-## How RAG works
+Write with my model:
 
-1. **Ingest:** upload a file from the Docs tab (`POST /api/documents`). Text is extracted (PDF via
-   `pypdf`), split into ~1000-character chunks with 150 characters of overlap, embedded locally with
-   all-MiniLM-L6-v2, and stored in ChromaDB (`backend/data/chroma/`).
-2. **Retrieve:** when a question may be answered by your documents, the agent calls
-   `search_knowledge_base`, which embeds the query and returns the top passages by cosine similarity.
-3. **Generate:** Claude answers from those passages and cites the source file names.
-
-The embedding model (~80 MB) downloads on first upload and is cached in `~/.cache/chroma`.
+- A character-level transformer (~0.8M parameters, 4 layers, 128-char context) whose weights start
+  random and are learned only from `data/shakespeare.txt`.
+- It continues text in the style of its training data. It has no knowledge, can't answer questions, and
+  isn't a chat assistant. That needs far more data, parameters and GPU compute than one CPU has.
+- PyTorch provides tensors, autograd and generic layers. The tokenizer, attention, transformer
+  blocks, training loop and sampling are implemented in `backend/app/model.py` and `train.py`.
 
 ## Run it
 
-**Backend** (Python 3.10+):
+Backend (from `backend/`):
 
 ```bash
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env              # then set ANTHROPIC_API_KEY in .env
-uvicorn app.main:app --reload --port 8000
+.venv/bin/python -m app.train                          # train from scratch (~10 min on 4 CPU cores)
+.venv/bin/uvicorn app.main:app --reload --port 8000    # API on :8000
+.venv/bin/python -m pytest -q                          # tests
 ```
 
-**Frontend:**
+Frontend (from `frontend/`):
 
 ```bash
-cd frontend
-npm install
-npm start                          # http://localhost:4200, proxies /api → :8000
+npm start                    # http://localhost:4200, proxies /api to :8000
+npx ng test --watch=false
 ```
 
-## Tests
+Training writes `backend/checkpoints/model.pt` (best validation loss) and `train_log.csv`. Retrain while
+the server runs, then click **Reload model** in the UI.
 
-```bash
-cd backend && pytest               # tools, RAG, and agent loop against a mocked HTTP transport
-cd frontend && npx ng test --watch=false
-```
+Train options: `--steps`, `--n-layer`, `--n-head`, `--n-embd`, `--block-size`, `--batch-size`, `--lr`,
+`--data <any .txt file>`. See `python -m app.train --help`.
 
 ## API
 
-Every route except `/api/health` and `/api/auth/*` requires a signed-in user. Each user sees only
-their own sessions, notes, documents and workspace files.
+| Method | Path                | Purpose                                                      |
+| ------ | ------------------- | ------------------------------------------------------------ |
+| GET    | `/api/health`       | liveness                                                     |
+| GET    | `/api/model`        | is a model loaded, its size, training step and val loss      |
+| POST   | `/api/model/reload` | reload `checkpoints/model.pt` from disk                      |
+| POST   | `/api/generate`     | `{prompt, max_new_tokens, temperature, top_k}` → SSE stream  |
+| POST   | `/api/search`       | `{query, k}` → `{answer, terms, results[], searched_passages}` |
+| GET    | `/api/docs`         | list documents and their passage counts                      |
+| POST   | `/api/docs`         | upload a file (multipart field `file`, max 20 MB)            |
+| DELETE | `/api/docs/{name}`  | delete a document                                            |
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/auth/signup` | `{name, email, password}` → create an account and sign in (the first account becomes admin) |
-| `POST` | `/api/auth/login` | `{email, password}` → sets the httpOnly `synora_session` cookie |
-| `POST` | `/api/auth/logout` | Revoke the current login |
-| `GET` | `/api/auth/me` | The signed-in user (401 if signed out) |
-| `GET` | `/api/admin/users` | Admin: list accounts |
-| `PATCH` | `/api/admin/users/{id}` | Admin: `{role?, disabled?}`; disabling revokes the user's logins |
-| `POST` | `/api/chat` | `{message, session_id?}` → SSE stream of agent events |
-| `GET` | `/api/sessions` | List conversations |
-| `GET` / `PATCH` / `DELETE` | `/api/sessions/{id}` | Read transcript / rename / delete |
-| `GET` / `POST` | `/api/documents` | List / upload (multipart `file`) RAG documents |
-| `DELETE` | `/api/documents/{id}` | Remove a document and its vectors |
-| `GET` | `/api/notes` | Long-term memory (`?q=` to search) |
-| `DELETE` | `/api/notes/{id}` | Forget a note |
-| `GET` | `/api/tools` | Tool catalog |
-| `GET` | `/api/health` | Model and settings |
+`/api/generate` streams `data: {"text": "…"}` per character, an optional `{"notice": …}` when the prompt
+contains characters the model never saw, and ends with `{"done": true}`.
 
-SSE events: `session`, `step_start`, `text`, `thinking`, `tool_start`, `tool_input`,
-`tool_result`, `step_discard`, `refusal`, `notice`, `error`, `done`.
+## Setup from scratch
 
-## Configuration
+This machine lacks `python3-venv`, so the venvs were made with `python3 -m venv --without-pip .venv` and
+pip bootstrapped with `get-pip.py`. With `sudo apt install python3-venv` available:
 
-All settings are environment variables. See `backend/.env.example`:
-`AGENT_MODEL`, `AGENT_EFFORT` (`low`…`max`), `AGENT_MAX_TOKENS`, `AGENT_MAX_ITERATIONS`,
-`AGENT_ENABLE_WEB_TOOLS`, `AGENT_ENABLE_FALLBACKS`, `AGENT_DATA_DIR`, `AGENT_WORKSPACE_DIR`,
-`AGENT_CORS_ORIGINS`, `AGENT_ALLOW_SIGNUP`, `AGENT_LOGIN_DAYS`, `AGENT_COOKIE_SECURE`.
+```bash
+cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cd ../frontend && npm install
+```
 
-Set `AGENT_COOKIE_SECURE=true` when serving over HTTPS. Set `AGENT_ALLOW_SIGNUP=false` to stop
-new sign-ups once the admin account exists.
+## Data
 
-Server-side refusal fallbacks are on by default: if Claude's safety classifiers decline a request,
-the API re-runs it on a recommended fallback model instead of returning a refusal.
+- `data/shakespeare.txt`: Tiny Shakespeare (public domain), from
+  https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
+
+## Learning progress
+
+- [x] Phase 1, Lesson 1: environment setup, text statistics (`lessons/l01_text_stats.py`)

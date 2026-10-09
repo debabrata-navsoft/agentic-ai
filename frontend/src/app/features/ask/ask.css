@@ -1,0 +1,169 @@
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 16px;
+  height: calc(100vh - 150px);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.thread {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-right: 4px;
+}
+
+.question {
+  margin: 0 0 10px auto;
+  max-width: 80%;
+  width: fit-content;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+  white-space: pre-wrap;
+}
+
+.answer {
+  max-width: 90%;
+}
+
+.answer-text {
+  margin: 0;
+  line-height: 1.6;
+}
+
+details {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.source {
+  margin-top: 10px;
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+}
+
+.source-head {
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.source pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+mark {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 15vh;
+}
+
+.empty h2 {
+  color: var(--text);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  font-family: inherit;
+}
+
+.docs {
+  overflow-y: auto;
+  margin: 0;
+}
+
+.docs h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.doc {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc .muted {
+  grid-row: 2;
+}
+
+.icon {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  background: none;
+  color: var(--muted);
+  padding: 4px 8px;
+}
+
+.upload {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.upload.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .thread {
+    max-height: 60vh;
+  }
+}

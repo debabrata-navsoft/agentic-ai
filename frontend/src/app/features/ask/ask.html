@@ -1,0 +1,97 @@
+<div class="layout">
+  <section class="chat">
+    <div class="thread" #thread>
+      @for (turn of turns(); track $index) {
+        <div class="question">{{ turn.question }}</div>
+
+        @if (turn.result; as r) {
+          <div class="card answer">
+            @if (r.results.length) {
+              <p class="answer-text">
+                @for (seg of highlight(r.answer, r.terms); track $index) {
+                  @if (seg.hit) {
+                    <mark>{{ seg.text }}</mark>
+                  } @else {
+                    {{ seg.text }}
+                  }
+                }
+              </p>
+              <details>
+                <summary>
+                  {{ r.results.length }} sources · searched {{ r.searched_passages | number }}
+                  passages
+                </summary>
+                @for (hit of r.results; track $index) {
+                  <div class="source">
+                    <div class="source-head">
+                      {{ hit.doc }} · passage {{ hit.passage }} · score {{ hit.score }}
+                    </div>
+                    <pre>@for (seg of highlight(hit.text, r.terms); track $index) {@if (seg.hit) {<mark>{{ seg.text }}</mark>} @else {{{ seg.text }}}}</pre>
+                  </div>
+                }
+              </details>
+            } @else {
+              <p class="muted">
+                Nothing in your documents matches that. Try different words, or upload a document
+                about it.
+              </p>
+            }
+          </div>
+        } @else if (turn.error) {
+          <p class="error">{{ turn.error }}</p>
+        } @else {
+          <div class="card answer muted">Searching…</div>
+        }
+      } @empty {
+        <div class="empty">
+          <h2>Ask your documents</h2>
+          <p>
+            Type a question and Synora finds the best matching passages in your documents and quotes
+            the answer from them. Upload your own files on the right.
+          </p>
+        </div>
+      }
+    </div>
+
+    <div class="composer">
+      <textarea
+        rows="1"
+        placeholder="Ask a question…"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        (keydown)="onKey($event)"
+      ></textarea>
+      <button (click)="ask()" [disabled]="busy() || !query().trim()">Ask</button>
+    </div>
+  </section>
+
+  <aside class="card docs">
+    <h3>Documents</h3>
+    @for (doc of docs(); track doc.name) {
+      <div class="doc">
+        <span class="doc-name" [title]="doc.name">{{ doc.name }}</span>
+        <span class="muted">{{ doc.passages | number }} passages</span>
+        <button class="icon" (click)="remove(doc)" [attr.aria-label]="'Delete ' + doc.name">
+          ✕
+        </button>
+      </div>
+    } @empty {
+      <p class="muted">No documents yet.</p>
+    }
+    @if (docsError()) {
+      <p class="error">{{ docsError() }}</p>
+    }
+    <label class="upload" [class.disabled]="uploading()">
+      {{ uploading() ? 'Uploading…' : '+ Upload .txt, .md or .pdf' }}
+      <input
+        type="file"
+        accept=".txt,.md,.pdf"
+        multiple
+        hidden
+        [disabled]="uploading()"
+        (change)="upload(fileInput)"
+        #fileInput
+      />
+    </label>
+  </aside>
+</div>

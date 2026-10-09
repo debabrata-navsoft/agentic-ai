@@ -1,29 +1,16 @@
-@if (auth.ready()) {
-  @if (auth.user()) {
-    <app-sidebar />
-    @switch (store.activeView()) {
-      @case ('chat') {
-        <app-chat-panel />
-      }
-      @case ('agents') {
-        <app-agents-page />
-      }
-      @case ('docs') {
-        <app-docs-page />
-      }
-      @case ('memory') {
-        <app-memory-page />
-      }
-      @case ('tools') {
-        <app-tools-page />
-      }
-      @case ('users') {
-        @if (auth.isAdmin()) {
-          <app-user-admin />
-        }
-      }
-    }
-  } @else {
-    <app-auth-page [admin]="store.activeView() === 'users'" />
-  }
-}
+<header>
+  <div>
+    <h1>Synora AI</h1>
+    <p class="tagline">Built and run on this computer. No external AI.</p>
+  </div>
+  <nav>
+    <button [class.active]="tab() === 'ask'" (click)="tab.set('ask')">Ask documents</button>
+    <button [class.active]="tab() === 'write'" (click)="tab.set('write')">
+      Write with my model
+    </button>
+  </nav>
+</header>
+
+<!-- Both stay mounted so switching tabs keeps the conversation and generated text. -->
+<app-ask [hidden]="tab() !== 'ask'" />
+<app-write [hidden]="tab() !== 'write'" />

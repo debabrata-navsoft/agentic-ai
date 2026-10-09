@@ -1,249 +1,84 @@
-/* Global theme and shared rules. Component-specific styles live next to each component. */
-
 :root {
-  --bg: #000000;
-  --panel: #0a0a0a;
-  --panel-2: #161616;
-  --border: #262626;
-  --text: #ffffff;
-  --muted: #a3a3a3;
-  /* Default (Mono) accent: white on the dark theme, black on the light one. */
-  --accent: #ffffff;
-  --accent-2: #d4d4d4;
-  /* Text and icons drawn on top of the accent color. */
-  --on-accent: #000000;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --err: #f87171;
-  --radius: 12px;
-  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  color-scheme: dark;
+  color-scheme: light dark;
+  --bg: #f7f7f9;
+  --surface: #ffffff;
+  --border: #e2e2e8;
+  --text: #1b1b22;
+  --muted: #6b6b78;
+  --accent: #5b4cdb;
+  --ok: #22a35a;
+  --danger: #d13b3b;
 }
 
-[data-theme='light'] {
-  --bg: #ffffff;
-  --panel: #fafafa;
-  --panel-2: #f0f0f0;
-  --border: #e0e0e0;
-  --text: #000000;
-  --muted: #555555;
-  --accent: #000000;
-  --accent-2: #404040;
-  --on-accent: #ffffff;
-  color-scheme: light;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121217;
+    --surface: #1b1b23;
+    --border: #2d2d39;
+    --text: #e9e9f0;
+    --muted: #9a9aab;
+    --accent: #9d93ff;
+  }
 }
 
-/* Colored accents (picked in Settings) override Mono on both themes. */
-[data-accent]:not([data-accent='mono']) {
-  --on-accent: #ffffff;
-}
-[data-accent='blue'] {
-  --accent: #2563eb;
-  --accent-2: #60a5fa;
-}
-[data-accent='emerald'] {
-  --accent: #059669;
-  --accent-2: #34d399;
-}
-[data-accent='amber'] {
-  --accent: #d97706;
-  --accent-2: #fbbf24;
-}
-[data-accent='rose'] {
-  --accent: #e11d48;
-  --accent-2: #fb7185;
-}
-
-[data-font='compact'] html,
-[data-font='compact'] body {
-  font-size: 13.5px;
-}
-[data-font='normal'] html,
-[data-font='normal'] body {
-  font-size: 15px;
-}
-[data-font='large'] html,
-[data-font='large'] body {
-  font-size: 16.5px;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
 body {
   margin: 0;
-  height: 100%;
   background: var(--bg);
   color: var(--text);
-  font:
-    15px/1.6 'Plus Jakarta Sans',
-    Inter,
+  font-family:
     system-ui,
     -apple-system,
     'Segoe UI',
     Roboto,
     sans-serif;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
 }
 
-button {
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
+code,
 pre,
-code {
-  font-family: var(--mono);
-  font-size: 13px;
+textarea {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
-/* Brand mark, shared by the sidebar, top bar, welcome screen, messages and auth page */
-.logo {
-  display: block;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-}
-/* The "AI" in the Synora AI wordmark */
-.brand-ai {
-  color: #f97316;
-}
-.logo.small {
-  width: 28px;
-  height: 28px;
-}
-.logo.big {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 18px;
-  filter: drop-shadow(0 8px 24px rgba(249, 115, 22, 0.35));
-}
-
-/* Small monospace pill: status tags, tool chips, composer meta */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font: 11px/1.4 var(--mono);
-  color: var(--muted);
-  background: var(--panel-2);
+textarea,
+input[type='number'] {
+  background: var(--bg);
+  color: var(--text);
   border: 1px solid var(--border);
-}
-.chip .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ok);
-}
-.mono-label {
-  font: 500 11px/1.4 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.avatar {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--on-accent);
-  font-weight: 700;
+  border-radius: 8px;
+  padding: 10px;
   font-size: 14px;
 }
 
-/* Sidebar/admin list cards */
+input[type='range'] {
+  accent-color: var(--accent);
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Shared by the Ask and Write pages. */
 .card {
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--panel-2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  font-size: 13px;
-}
-.card p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  white-space: pre-wrap;
-}
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.badge {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-}
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Rendered Markdown is inserted via [innerHTML], which component-scoped styles can't reach. */
-.markdown > :first-child {
-  margin-top: 0;
-}
-.markdown > :last-child {
-  margin-bottom: 0;
-}
-.markdown a {
-  color: var(--accent);
-}
-.markdown pre {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  padding: 12px;
-  border-radius: 10px;
-  overflow-x: auto;
-}
-.markdown :not(pre) > code {
-  background: var(--panel-2);
-  padding: 1px 5px;
-  border-radius: 5px;
-}
-.markdown table {
-  border-collapse: collapse;
-}
-.markdown th,
-.markdown td {
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
 }

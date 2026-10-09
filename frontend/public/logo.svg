@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Synora AI">
-  <!-- Synora AI mark: two interlocking rings. Pink passes over orange at the top, under it at the bottom. -->
-  <g fill="none" stroke-width="11">
-    <circle cx="42" cy="60" r="30" stroke="#f97316"/>
-    <circle cx="78" cy="60" r="30" stroke="#db2777"/>
-    <path d="M64.98 79.28 A30 30 0 0 1 54.2 87.41" stroke="#f97316"/>
-  </g>
-</svg>
