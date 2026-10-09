@@ -31,6 +31,7 @@ const VIEWS = Object.fromEntries(Object.entries(PATHS).map(([v, p]) => [p, v as 
   host: {
     '[class.signed-in]': 'auth.user()',
     '(window:popstate)': 'openUrl()',
+    '(window:pageshow)': 'onPageShow($event)',
   },
 })
 export class App implements OnInit {
@@ -44,7 +45,16 @@ export class App implements OnInit {
       const id = this.userId();
       untracked(() => {
         this.store.reset();
-        if (id) this.store.init();
+        if (id) {
+          this.store.init();
+          if (
+            location.pathname === '/login' ||
+            location.pathname === '/signin' ||
+            location.pathname === '/signup'
+          ) {
+            history.replaceState(null, '', '/');
+          }
+        }
         this.openUrl(); // re-runs the route guard for the new user (e.g. a non-admin on /admin)
       });
     });
@@ -57,9 +67,45 @@ export class App implements OnInit {
     });
   }
 
-  /** Show the page for the current URL (unknown paths open the chat). */
+  /** Show the page for the current URL, enforcing route guards. */
   protected openUrl() {
-    this.store.setActiveView(VIEWS[location.pathname.replace(/\/+$/, '') || '/'] ?? 'chat');
+    const raw = location.pathname.replace(/\/+$/, '') || '/';
+
+    // Route guard: if signed in and navigating back to login/signin/signup, redirect to chat
+    if (this.auth.user() && (raw === '/login' || raw === '/signin' || raw === '/signup')) {
+      history.replaceState(null, '', '/');
+      this.store.setActiveView('chat');
+      return;
+    }
+
+    // Route guard: if signed in but not an admin, block /admin
+    if (this.auth.user() && !this.auth.isAdmin() && raw === '/admin') {
+      history.replaceState(null, '', '/');
+      this.store.setActiveView('chat');
+      return;
+    }
+
+    // Route guard: if signed out and attempting to access protected pages, stay on /
+    if (
+      !this.auth.user() &&
+      raw !== '/' &&
+      raw !== '/admin' &&
+      raw !== '/login' &&
+      raw !== '/reset-password'
+    ) {
+      history.replaceState(null, '', '/');
+      this.store.setActiveView('chat');
+      return;
+    }
+
+    this.store.setActiveView(VIEWS[raw] ?? 'chat');
+  }
+
+  protected onPageShow(ev: PageTransitionEvent) {
+    if (ev.persisted) {
+      this.auth.init();
+    }
+    this.openUrl();
   }
 
   ngOnInit() {

@@ -226,7 +226,8 @@ textarea {
 }
 
 textarea::placeholder {
-  color: var(--muted);
+  color: #8e8e93;
+  opacity: 1;
 }
 
 .send {

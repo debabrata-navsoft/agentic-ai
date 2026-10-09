@@ -23,7 +23,7 @@ const TEXT: Record<Mode, [string, string, string]> = {
     "Enter your email and we'll send you a reset link.",
     'Send reset link',
   ],
-  reset: ['Choose a new password', 'Use at least 8 characters.', 'Update password'],
+  reset: ['Choose a new password', 'Use 6 to 16 characters.', 'Update password'],
 };
 const ADMIN_SIGNIN = [
   'Admin sign in',
@@ -60,12 +60,16 @@ export class AuthPage {
   protected readonly password = signal('');
   protected readonly confirm = signal('');
   protected readonly showPassword = signal(false);
+  protected readonly showConfirmPassword = signal(false);
   protected readonly busy = signal(false);
   protected readonly formError = signal<string | null>(null);
   /** A success message, e.g. after requesting a reset link. */
   protected readonly notice = signal<string | null>(null);
-  /** Field errors show after the first submit, then update as the user types. */
+  /** Field errors show after the first submit or when the user leaves (blurs) a field. */
   protected readonly submitted = signal(false);
+  protected readonly touched = signal<
+    Partial<Record<'name' | 'email' | 'password' | 'confirm', boolean>>
+  >({});
 
   /** Which fields each mode shows. */
   protected readonly has = computed(() => {
@@ -122,8 +126,19 @@ export class AuthPage {
   protected setMode(mode: Mode) {
     this.selectedMode.set(mode);
     this.submitted.set(false);
+    this.touched.set({});
+    this.showPassword.set(false);
+    this.showConfirmPassword.set(false);
     this.formError.set(null);
     this.notice.set(null);
+  }
+
+  protected markTouched(field: 'name' | 'email' | 'password' | 'confirm') {
+    this.touched.update((t) => ({ ...t, [field]: true }));
+  }
+
+  protected shouldShowError(field: 'name' | 'email' | 'password' | 'confirm'): boolean {
+    return (this.submitted() || !!this.touched()[field]) && !!this.errors()[field];
   }
 
   /** From the admin sign-in (/admin), back to the regular one (/). */
@@ -147,9 +162,11 @@ export class AuthPage {
       switch (this.mode()) {
         case 'signin':
           await this.auth.login(this.email(), this.password(), this.admin());
+          history.replaceState(null, '', this.admin() ? '/admin' : '/');
           break;
         case 'signup':
           await this.auth.signup(this.name(), this.email(), this.password());
+          history.replaceState(null, '', '/');
           break;
         case 'forgot':
           await this.api.forgotPassword(this.email());

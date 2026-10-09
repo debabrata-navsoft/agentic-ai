@@ -90,17 +90,17 @@ class Credentials(EmailIn):
 
 class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=256)
-    new_password: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=6, max_length=256)
 
 
 class PasswordReset(BaseModel):
     token: str = Field(min_length=10, max_length=200)
-    new_password: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=6, max_length=256)
 
 
 class SignupRequest(Credentials):
     name: str = Field(min_length=1, max_length=80)
-    password: str = Field(min_length=8, max_length=256)
+    password: str = Field(min_length=6, max_length=256)
 
 
 class UserUpdate(BaseModel):

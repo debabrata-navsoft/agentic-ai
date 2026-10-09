@@ -45,7 +45,7 @@ export class ChatPanel {
       id: 'auto',
       label: 'Auto Agent',
       icon: 'sparkles',
-      placeholder: 'Message Synora… (Auto-detects tools, web search, files & math)',
+      placeholder: 'Ask Synora',
       description: 'Autonomous multi-tool coordinator',
     },
     {

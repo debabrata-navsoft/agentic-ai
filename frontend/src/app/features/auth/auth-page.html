@@ -67,13 +67,14 @@
           name="name"
           autocomplete="name"
           maxlength="80"
-          placeholder="Ada Lovelace"
-          [class.invalid]="submitted() && errors().name"
+          placeholder="Enter your name"
+          [class.invalid]="shouldShowError('name')"
           [value]="name()"
           (input)="name.set(value($event))"
+          (blur)="markTouched('name')"
         />
-        @if (submitted() && errors().name; as err) {
-          <small class="field-error">{{ err }}</small>
+        @if (shouldShowError('name')) {
+          <small class="field-error">{{ errors().name }}</small>
         }
       </label>
     }
@@ -85,13 +86,15 @@
           name="email"
           type="email"
           autocomplete="email"
-          placeholder="you@example.com"
-          [class.invalid]="submitted() && errors().email"
+          maxlength="254"
+          placeholder="Enter your email"
+          [class.invalid]="shouldShowError('email')"
           [value]="email()"
           (input)="email.set(value($event))"
+          (blur)="markTouched('email')"
         />
-        @if (submitted() && errors().email; as err) {
-          <small class="field-error">{{ err }}</small>
+        @if (shouldShowError('email')) {
+          <small class="field-error">{{ errors().email }}</small>
         }
       </label>
     }
@@ -111,10 +114,13 @@
             name="password"
             [type]="showPassword() ? 'text' : 'password'"
             [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'"
-            [placeholder]="mode() === 'signin' ? '••••••••' : 'At least 8 characters'"
-            [class.invalid]="submitted() && errors().password"
+            [attr.minlength]="mode() === 'signin' ? null : 6"
+            maxlength="16"
+            placeholder="••••••••"
+            [class.invalid]="shouldShowError('password')"
             [value]="password()"
             (input)="password.set(value($event))"
+            (blur)="markTouched('password')"
           />
           <button
             type="button"
@@ -126,8 +132,8 @@
             <svg [lucideIcon]="showPassword() ? 'eye-off' : 'eye'" size="18"></svg>
           </button>
         </div>
-        @if (submitted() && errors().password; as err) {
-          <small class="field-error">{{ err }}</small>
+        @if (shouldShowError('password')) {
+          <small class="field-error">{{ errors().password }}</small>
         }
       </label>
     }
@@ -135,17 +141,31 @@
     @if (has().confirm) {
       <label>
         <span>Confirm password</span>
-        <input
-          name="confirm"
-          autocomplete="new-password"
-          placeholder="Type it again"
-          [type]="showPassword() ? 'text' : 'password'"
-          [class.invalid]="submitted() && errors().confirm"
-          [value]="confirm()"
-          (input)="confirm.set(value($event))"
-        />
-        @if (submitted() && errors().confirm; as err) {
-          <small class="field-error">{{ err }}</small>
+        <div class="password">
+          <input
+            name="confirm"
+            autocomplete="new-password"
+            minlength="6"
+            maxlength="16"
+            placeholder="••••••••"
+            [type]="showConfirmPassword() ? 'text' : 'password'"
+            [class.invalid]="shouldShowError('confirm')"
+            [value]="confirm()"
+            (input)="confirm.set(value($event))"
+            (blur)="markTouched('confirm')"
+          />
+          <button
+            type="button"
+            class="reveal"
+            [attr.aria-label]="showConfirmPassword() ? 'Hide password' : 'Show password'"
+            [title]="showConfirmPassword() ? 'Hide password' : 'Show password'"
+            (click)="showConfirmPassword.set(!showConfirmPassword())"
+          >
+            <svg [lucideIcon]="showConfirmPassword() ? 'eye-off' : 'eye'" size="18"></svg>
+          </button>
+        </div>
+        @if (shouldShowError('confirm')) {
+          <small class="field-error">{{ errors().confirm }}</small>
         }
       </label>
     }

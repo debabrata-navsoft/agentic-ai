@@ -7,12 +7,15 @@ export const required = (value: string, message: string) => (value.trim() ? null
 
 export function emailError(value: string) {
   if (!value.trim()) return 'Enter your email.';
+  if (value.length > 254) return 'Email cannot exceed 254 characters.';
   return EMAIL.test(value.trim()) ? null : 'Enter a valid email address.';
 }
 
 export function newPasswordError(value: string) {
   if (!value) return 'Enter a password.';
-  return value.length < 8 ? 'Use at least 8 characters.' : null;
+  if (value.length < 6) return 'Use at least 6 characters.';
+  if (value.length > 16) return 'Use at most 16 characters.';
+  return null;
 }
 
 export function confirmError(password: string, confirm: string) {
