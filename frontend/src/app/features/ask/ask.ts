@@ -9,7 +9,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
 import { DocInfo, ModelApi, SearchResult } from '../../core/model-api';
-import { highlight } from '../../core/highlight';
+import { HighlightText } from '../../shared/highlight-text';
 
 interface Turn {
   question: string;
@@ -19,7 +19,7 @@ interface Turn {
 
 @Component({
   selector: 'app-ask',
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, HighlightText],
   templateUrl: './ask.html',
   styleUrl: './ask.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,7 +28,6 @@ export class Ask {
   private readonly api = inject(ModelApi);
   private readonly thread = viewChild<ElementRef<HTMLElement>>('thread');
 
-  protected readonly highlight = highlight;
   protected readonly turns = signal<Turn[]>([]);
   protected readonly query = signal('');
   protected readonly busy = signal(false);

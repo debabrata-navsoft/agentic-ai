@@ -67,13 +67,6 @@ summary {
   overflow-y: auto;
 }
 
-mark {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
-  color: inherit;
-  border-radius: 3px;
-  padding: 0 1px;
-}
-
 .empty {
   text-align: center;
   color: var(--muted);

@@ -7,15 +7,7 @@
         @if (turn.result; as r) {
           <div class="card answer">
             @if (r.results.length) {
-              <p class="answer-text">
-                @for (seg of highlight(r.answer, r.terms); track $index) {
-                  @if (seg.hit) {
-                    <mark>{{ seg.text }}</mark>
-                  } @else {
-                    {{ seg.text }}
-                  }
-                }
-              </p>
+              <p class="answer-text"><app-highlight [text]="r.answer" [terms]="r.terms" /></p>
               <details>
                 <summary>
                   {{ r.results.length }} sources · searched {{ r.searched_passages | number }}
@@ -26,7 +18,7 @@
                     <div class="source-head">
                       {{ hit.doc }} · passage {{ hit.passage }} · score {{ hit.score }}
                     </div>
-                    <pre>@for (seg of highlight(hit.text, r.terms); track $index) {@if (seg.hit) {<mark>{{ seg.text }}</mark>} @else {{{ seg.text }}}}</pre>
+                    <pre><app-highlight [text]="hit.text" [terms]="r.terms" /></pre>
                   </div>
                 }
               </details>

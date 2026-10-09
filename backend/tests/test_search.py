@@ -73,3 +73,28 @@ def test_picks_up_files_changed_on_disk(tmp_path):
     (tmp_path / "broken.pdf").write_bytes(b"not a pdf")
     docs = {d["name"]: d["passages"] for d in store.documents()}
     assert docs == {"broken.pdf": 0, "fruit.txt": 1}
+
+
+def test_only_changed_files_are_reparsed(tmp_path, monkeypatch):
+    import app.search as search
+
+    (tmp_path / "fruit.txt").write_text(FRUIT)
+    (tmp_path / "planets.md").write_text(PLANETS)
+    store = DocumentStore(tmp_path)
+
+    parsed = []
+    real = search.read_document
+    monkeypatch.setattr(search, "read_document", lambda p: parsed.append(p.name) or real(p))
+    (tmp_path / "note.txt").write_text("A short note about bananas.")
+    store.search("bananas")
+    assert parsed == ["note.txt"]
+
+    (tmp_path / "fruit.txt").unlink()
+    assert [d["name"] for d in store.documents()] == ["note.txt", "planets.md"]
+    assert parsed == ["note.txt"]
+
+
+def test_answer_quotes_repeated_sentence_once():
+    line = "Hence from Verona art thou banished."
+    index = Index([Passage("a", 0, line), Passage("b", 0, line)])
+    assert index.answer("banished from Verona", index.search("banished from Verona")) == line
